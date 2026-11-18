@@ -1,7 +1,7 @@
 // Renders frames of the opening animation side by side, to look at it
 // without a phone: flutter test tool/render_intro_test.dart
-import 'dart:io';
 // ignore_for_file: invalid_use_of_visible_for_testing_member
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:ammerha/main.dart';
