@@ -12,6 +12,7 @@ import 'services/analytics.dart';
 import 'services/partner.dart';
 import 'services/push.dart';
 import 'services/requests_store.dart';
+import 'widgets/intro.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,9 +29,12 @@ Future<void> main() async {
 }
 
 class AmmerhaApp extends StatefulWidget {
-  const AmmerhaApp({super.key, this.useGoogleFonts = true});
+  const AmmerhaApp({super.key, this.useGoogleFonts = true, this.showIntro = true});
 
   final bool useGoogleFonts;
+
+  /// The opening animation; widget tests start straight on the home screen.
+  final bool showIntro;
 
   @override
   State<AmmerhaApp> createState() => _AmmerhaAppState();
@@ -63,6 +67,7 @@ class _AmmerhaAppState extends State<AmmerhaApp> {
       theme: buildAppTheme(useGoogleFonts: widget.useGoogleFonts),
       routerConfig: _router,
       scaffoldMessengerKey: Push.instance.messengerKey,
+      builder: (context, child) => IntroOverlay(enabled: widget.showIntro, child: child!),
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,

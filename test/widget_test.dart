@@ -32,6 +32,27 @@ void main() {
     expect(const CalcInput(kind: RequestKind.service, services: {Service.paint}).needsRooms, isFalse);
   });
 
+  testWidgets('the opening animation draws the name, then lifts away; a tap skips it', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const AmmerhaApp(useGoogleFonts: false));
+    await tester.pump(const Duration(milliseconds: 1600));
+    expect(find.text('عمّرها'), findsNWidgets(2), reason: 'the intro name over the home logo');
+    expect(find.text('برعاية سنديان'), findsNWidgets(2));
+    await tester.pumpAndSettle();
+    expect(find.text('عمّرها'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(const AmmerhaApp(useGoogleFonts: false));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tapAt(const Offset(200, 400));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    expect(find.text('عمّرها'), findsOneWidget);
+  });
+
   testWidgets('a full apartment: calculator, range, quote form, then a request number', (tester) async {
     await _startApp(tester);
     expect(find.text('بدك إكساء شقة كاملة، ولا خدمة وحدة؟'), findsOneWidget);

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../data/estimate.dart';
 import '../../services/partner.dart';
+import '../../widgets/brand_mark.dart';
 import '../../widgets/common.dart';
 
 class HomePage extends StatelessWidget {
@@ -23,8 +24,9 @@ class HomePage extends StatelessWidget {
               Container(
                 width: 40,
                 height: 40,
+                padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.home_work_outlined, color: Colors.white, size: 22),
+                child: const CustomPaint(painter: BrandMarkPainter(stroke: 0.09)),
               ),
               const SizedBox(width: 10),
               const Text('عمّرها', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
