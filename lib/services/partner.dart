@@ -19,6 +19,9 @@ class Partner {
   /// Digits with the country code, or empty until it is set in the dashboard.
   String whatsappNumber = '';
 
+  /// The purchase inspection fee in dollars; 0 when سنديان tells it directly.
+  num inspectionFee = 0;
+
   Future<void> load(SupabaseClient db) async {
     final prefs = await SharedPreferences.getInstance();
     apply({'sponsor_name': prefs.getString(_nameKey), 'whatsapp_number': prefs.getString(_numberKey)});
@@ -38,5 +41,7 @@ class Partner {
     if (name is String && name.trim().isNotEmpty) sponsorName.value = name.trim();
     final number = json['whatsapp_number'];
     if (number != null) whatsappNumber = '$number'.replaceAll(RegExp(r'\D'), '');
+    final fee = json['inspection_fee_usd'];
+    if (fee is num) inspectionFee = fee;
   }
 }

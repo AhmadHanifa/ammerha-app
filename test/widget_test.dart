@@ -14,6 +14,10 @@ Future<void> _startApp(WidgetTester tester) async {
 }
 
 Future<void> _tapText(WidgetTester tester, String label) async {
+  // Long lists build lazily: scroll until the item exists.
+  if (find.text(label).evaluate().isEmpty) {
+    await tester.scrollUntilVisible(find.text(label), 300, scrollable: find.byType(Scrollable).first);
+  }
   await tester.ensureVisible(find.text(label));
   await tester.tap(find.text(label));
   await tester.pumpAndSettle();
@@ -100,5 +104,40 @@ void main() {
     expect(find.text('شو مستوى الإكساء؟'), findsOneWidget);
     await _tapText(tester, 'احسب الكلفة');
     expect(find.text('ضيف البلاط كمان بسعر أحسن'), findsOneWidget);
+  });
+
+  testWidgets('purchase inspection: from home to a request number, with no level or range', (tester) async {
+    await _startApp(tester);
+    await _tapText(tester, 'بدك تشتري شقة؟');
+    expect(find.text('افحص الشقة قبل ما تشتريها'), findsOneWidget);
+
+    await _tapText(tester, 'اطلب الفحص');
+    expect(find.text('لازم تعبّي هالحقل'), findsWidgets);
+
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'حلب، الفرقان');
+    await tester.enterText(fields.at(1), '95');
+    await tester.enterText(fields.at(3), 'أم علي');
+    await tester.enterText(fields.at(4), '0944777888');
+    await _tapText(tester, 'اطلب الفحص');
+    expect(find.text('رقم طلبك'), findsOneWidget);
+    expect(find.text('فحص شقة قبل الشراء'), findsOneWidget);
+    expect(find.text('حلب، الفرقان · 95 م²'), findsOneWidget);
+  });
+
+  testWidgets('abroad: the page explains the stages and starts the calculator', (tester) async {
+    await _startApp(tester);
+    await _tapText(tester, 'عايش برّا سوريا؟');
+    expect(find.text('عمّر بيتك بسوريا وإنت بمكانك'), findsOneWidget);
+    await _tapText(tester, 'ابدأ: احسب كلفة بيتك');
+    expect(find.text('قديش مساحة الشقة؟'), findsOneWidget);
+  });
+
+  testWidgets('verify: the certificate check opens from home', (tester) async {
+    await _startApp(tester);
+    await _tapText(tester, 'عندك كود شقة موثّقة؟ تحقق منه');
+    await tester.enterText(find.byType(TextField), 'AM-ABC234');
+    await _tapText(tester, 'تحقق');
+    expect(find.textContaining('ما لقينا شهادة'), findsOneWidget);
   });
 }

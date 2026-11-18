@@ -1,12 +1,19 @@
 import 'package:go_router/go_router.dart';
 
 import '../data/estimate.dart';
+import '../data/showcase.dart';
+import '../features/abroad/abroad_page.dart';
 import '../features/calculator/calculator_page.dart';
 import '../features/calculator/result_page.dart';
+import '../features/inspection/inspection_page.dart';
 import '../features/quote/quote_page.dart';
 import '../features/quote/sent_page.dart';
+import '../features/requests/request_file_page.dart';
 import '../features/services/services_page.dart';
+import '../features/showcase/designs_page.dart';
+import '../features/showcase/gallery_page.dart';
 import '../features/shell/shell_page.dart';
+import '../features/verify/verify_page.dart';
 import '../services/analytics.dart';
 import '../services/requests_store.dart';
 import 'transitions.dart';
@@ -59,6 +66,68 @@ GoRouter createRouter() => GoRouter(
       pageBuilder: (context, state) => sharedAxisPage(
         key: state.pageKey,
         child: ScreenTracker(name: 'sent', child: SentPage(request: state.extra! as SavedRequest)),
+      ),
+    ),
+    GoRoute(
+      path: '/gallery',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: const ScreenTracker(name: 'gallery', child: GalleryPage()),
+      ),
+    ),
+    GoRoute(
+      path: '/gallery/item',
+      redirect: (context, state) => state.extra is GalleryProject ? null : '/gallery',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: ScreenTracker(name: 'gallery_item', child: GalleryProjectPage(project: state.extra! as GalleryProject)),
+      ),
+    ),
+    GoRoute(
+      path: '/designs',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: const ScreenTracker(name: 'designs', child: DesignsPage()),
+      ),
+    ),
+    GoRoute(
+      path: '/designs/item',
+      redirect: (context, state) => state.extra is ReadyDesign ? null : '/designs',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: ScreenTracker(name: 'design_item', child: DesignPage(design: state.extra! as ReadyDesign)),
+      ),
+    ),
+    GoRoute(
+      path: '/abroad',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: const ScreenTracker(name: 'abroad', child: AbroadPage()),
+      ),
+    ),
+    GoRoute(
+      path: '/inspection',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: ScreenTracker(name: 'inspection', child: InspectionPage(remote: state.extra == true)),
+      ),
+    ),
+    GoRoute(
+      path: '/verify',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: ScreenTracker(name: 'verify', child: VerifyPage(code: state.uri.queryParameters['code'])),
+      ),
+    ),
+    GoRoute(
+      path: '/request/:no',
+      redirect: (context, state) => int.tryParse(state.pathParameters['no'] ?? '') == null ? '/' : null,
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: ScreenTracker(
+          name: 'request_file',
+          child: RequestFilePage(number: int.parse(state.pathParameters['no']!)),
+        ),
       ),
     ),
   ],

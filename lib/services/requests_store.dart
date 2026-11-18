@@ -5,7 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app/config.dart';
+import '../data/home_file.dart';
 import 'analytics.dart';
+import 'customer.dart';
+import 'home_files.dart';
 import 'partner.dart';
 
 /// A request the customer sent from this phone.
@@ -18,6 +21,7 @@ class SavedRequest {
     required this.range,
     required this.rangeWords,
     required this.createdAt,
+    this.kind = 'full',
   });
 
   factory SavedRequest.fromJson(Map<String, dynamic> json) => SavedRequest(
@@ -28,16 +32,26 @@ class SavedRequest {
     range: json['range'] as String,
     rangeWords: json['range_words'] as String,
     createdAt: DateTime.parse(json['created_at'] as String),
+    kind: json['kind'] as String? ?? 'full',
   );
 
   /// The number that follows the request to the contract and the statement.
   final int number;
   final String title;
+
+  /// The area and rooms; for an inspection, where the apartment is.
   final String size;
+
+  /// Empty for an inspection, which has no level or estimate.
   final String level;
   final String range;
   final String rangeWords;
   final DateTime createdAt;
+
+  /// full, service or inspection.
+  final String kind;
+
+  bool get isInspection => kind == 'inspection';
 
   Map<String, Object?> toJson() => {
     'number': number,
@@ -47,6 +61,7 @@ class SavedRequest {
     'range': range,
     'range_words': rangeWords,
     'created_at': createdAt.toIso8601String(),
+    'kind': kind,
   };
 
   String get dateLabel => '${createdAt.day}/${createdAt.month}/${createdAt.year}';
@@ -54,62 +69,53 @@ class SavedRequest {
   /// What the customer sends first on WhatsApp. No name or phone in it: the
   /// request number is enough to find them.
   String get whatsappText => [
-    'مرحبا ${Partner.instance.sponsorName.value}، بعتت طلب عرض سعر من تطبيق عمّرها.',
+    isInspection
+        ? 'مرحبا ${Partner.instance.sponsorName.value}، بعتت طلب فحص شقة قبل الشراء من تطبيق عمّرها.'
+        : 'مرحبا ${Partner.instance.sponsorName.value}، بعتت طلب عرض سعر من تطبيق عمّرها.',
     'رقم الطلب: $number',
     'الطلب: $title',
-    'المساحة: $size',
-    'المستوى: $level',
-    'الكلفة التقريبية: $rangeWords',
+    if (size.isNotEmpty) isInspection ? 'الشقة: $size' : 'المساحة: $size',
+    if (level.isNotEmpty) 'المستوى: $level',
+    if (rangeWords.isNotEmpty) 'الكلفة التقريبية: $rangeWords',
   ].join('\n');
 }
 
-/// Where a request stands, as سنديان records it in the dashboard.
-class RequestStatus {
-  const RequestStatus(this.status, this.inspectionAt);
-
-  final String status;
-  final DateTime? inspectionAt;
-
-  String get label => switch (status) {
-    'contacted' => 'تم التواصل',
-    'inspection' => inspectionAt == null ? 'معاينة' : 'معاينة ${inspectionAt!.day}/${inspectionAt!.month}',
-    'agreed' => 'تم الاتفاق',
-    'not_agreed' => 'ما تم الاتفاق',
-    'done' => 'خلص الشغل',
-    _ => 'وصل طلبك',
-  };
-}
-
-/// The customer's own requests, kept on the phone for the "طلباتي" tab.
+/// The customer's own requests, kept on the phone for the "طلباتي" tab, with
+/// what the server says about each.
 class RequestsStore extends ChangeNotifier {
   RequestsStore._();
   static final instance = RequestsStore._();
 
   static const _key = 'requests.saved';
   var _items = <SavedRequest>[];
-  var _statuses = <int, RequestStatus>{};
+  var _summaries = <int, RequestSummary>{};
 
   /// Newest first.
   List<SavedRequest> get items => List.unmodifiable(_items);
 
   /// Null until the server answers.
-  RequestStatus? statusOf(int number) => _statuses[number];
+  RequestSummary? summaryOf(int number) => _summaries[number];
 
-  /// Asks the server where each request stands; quiet when offline.
+  /// Stages and materials waiting for the customer, across all requests.
+  int get waiting => _summaries.values.fold(0, (sum, s) => sum + s.waiting);
+
+  /// Asks the server where each request stands; quiet when offline. With an
+  /// account it also learns about stages, reports and certificates.
   Future<void> refreshStatuses() async {
     if (!AppConfig.hasBackend || _items.isEmpty) return;
     try {
-      final rows = await Supabase.instance.client.rpc(
-        'my_request_status',
-        params: {'p_device_id': await Analytics.instance.ensureDeviceId()},
-      ).timeout(AppConfig.requestTimeout) as List;
-      _statuses = {
-        for (final r in rows.cast<Map<String, dynamic>>())
-          (r['request_no'] as num).toInt(): RequestStatus(
-            r['status'] as String,
-            r['inspection_at'] == null ? null : DateTime.parse(r['inspection_at'] as String).toLocal(),
-          ),
-      };
+      if (await Customer.instance.ensureSignedIn()) {
+        _summaries = {for (final s in await HomeFiles.myRequests()) s.number: s};
+      } else {
+        final rows = await Supabase.instance.client.rpc(
+          'my_request_status',
+          params: {'p_device_id': await Analytics.instance.ensureDeviceId()},
+        ).timeout(AppConfig.requestTimeout) as List;
+        _summaries = {
+          for (final r in rows.cast<Map<String, dynamic>>())
+            (r['request_no'] as num).toInt(): RequestSummary.fromJson({...r, 'kind': 'full'}),
+        };
+      }
       notifyListeners();
     } catch (_) {
       // Offline: the list shows without statuses.

@@ -9,6 +9,7 @@ import 'app/config.dart';
 import 'app/router.dart';
 import 'app/theme.dart';
 import 'services/analytics.dart';
+import 'services/customer.dart';
 import 'services/partner.dart';
 import 'services/push.dart';
 import 'services/requests_store.dart';
@@ -23,6 +24,7 @@ Future<void> main() async {
     unawaited(Analytics.instance.init(Supabase.instance.client));
     unawaited(Partner.instance.load(Supabase.instance.client));
     unawaited(Push.instance.init(Supabase.instance.client));
+    unawaited(Customer.instance.ensureSignedIn());
   }
   unawaited(RequestsStore.instance.load());
   runApp(const AmmerhaApp());
@@ -46,9 +48,13 @@ class _AmmerhaAppState extends State<AmmerhaApp> {
   @override
   void initState() {
     super.initState();
-    Push.instance.onOpen = (screen) => switch (screen) {
-      'requests' => _router.go('/?tab=requests'),
-      'calculator' => _router.go('/calculator'),
+    // 'request:107' opens that request's file; the others open a screen.
+    Push.instance.onOpen = (screen) => switch (screen.split(':')) {
+      ['request', final no] when int.tryParse(no) != null => _router.go('/request/$no'),
+      ['requests'] => _router.go('/?tab=requests'),
+      ['calculator'] => _router.go('/calculator'),
+      ['gallery'] => _router.go('/gallery'),
+      ['designs'] => _router.go('/designs'),
       _ => _router.go('/'),
     };
   }

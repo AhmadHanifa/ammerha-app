@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/config.dart';
+
 import '../../app/theme.dart';
 import '../../data/estimate.dart';
 import '../../services/partner.dart';
@@ -52,47 +54,107 @@ class _RequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final summary = RequestsStore.instance.summaryOf(request.number);
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.card + 2),
+        side: BorderSide(color: (summary?.waiting ?? 0) > 0 ? AppColors.primary : AppColors.line),
+      ),
+      child: InkWell(
+        onTap: AppConfig.hasBackend ? () => context.push('/request/${request.number}') : null,
+        borderRadius: BorderRadius.circular(AppRadius.card + 2),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Pill(label: 'طلب ${request.number}', background: AppColors.primaryTint, foreground: AppColors.primaryDark),
-              if (RequestsStore.instance.statusOf(request.number) case final status?) ...[
-                const SizedBox(width: 6),
-                Pill(label: status.label, background: AppColors.freshBg, foreground: AppColors.freshFg),
+              Row(
+                children: [
+                  Pill(
+                    label: 'طلب ${request.number}',
+                    background: AppColors.primaryTint,
+                    foreground: AppColors.primaryDark,
+                  ),
+                  if (summary != null) ...[
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Pill(
+                        label: summary.statusLabel,
+                        background: AppColors.freshBg,
+                        foreground: AppColors.freshFg,
+                      ),
+                    ),
+                  ],
+                  const Spacer(),
+                  Text(request.dateLabel, style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(request.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              Text(
+                [request.size, request.level].where((t) => t.isNotEmpty).join(' · '),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              if (request.range.isNotEmpty)
+                Text(
+                  request.range,
+                  textDirection: TextDirection.ltr,
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+              if (summary != null &&
+                  (summary.waiting > 0 || summary.report || summary.certificate || summary.stages > 0)) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (summary.waiting > 0)
+                      Pill(
+                        label: 'بانتظار موافقتك (${summary.waiting})',
+                        background: AppColors.primary,
+                        foreground: Colors.white,
+                      ),
+                    if (summary.stages > 0 && summary.waiting == 0)
+                      const Pill(
+                        label: 'ملف البيت',
+                        background: AppColors.primaryTint,
+                        foreground: AppColors.primaryDark,
+                      ),
+                    if (summary.report)
+                      const Pill(
+                        label: 'تقرير الفحص جاهز',
+                        background: AppColors.primaryTint,
+                        foreground: AppColors.primaryDark,
+                      ),
+                    if (summary.certificate)
+                      const Pill(
+                        label: 'شقة موثّقة',
+                        background: AppColors.primaryTint,
+                        foreground: AppColors.primaryDark,
+                      ),
+                  ],
+                ),
               ],
-              const Spacer(),
-              Text(request.dateLabel, style: Theme.of(context).textTheme.bodySmall),
+              if (Partner.instance.whatsappNumber.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final opened = await openWhatsApp(request);
+                    if (!opened && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('ما انفتح الواتساب. تأكد إنو مثبّت وجرّب كمان مرة.')),
+                      );
+                    }
+                  },
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+                  icon: const Icon(Icons.chat_outlined, size: 18),
+                  label: const Text('احكي معنا عالواتساب'),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 8),
-          Text(request.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-          Text('${request.size} · ${request.level}', style: Theme.of(context).textTheme.bodySmall),
-          Text(
-            request.range,
-            textDirection: TextDirection.ltr,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-          ),
-          if (Partner.instance.whatsappNumber.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: () async {
-                final opened = await openWhatsApp(request);
-                if (!opened && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('ما انفتح الواتساب. تأكد إنو مثبّت وجرّب كمان مرة.')),
-                  );
-                }
-              },
-              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-              icon: const Icon(Icons.chat_outlined, size: 18),
-              label: const Text('احكي معنا عالواتساب'),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

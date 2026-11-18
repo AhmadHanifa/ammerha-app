@@ -52,9 +52,9 @@ class _SentPageState extends State<SentPage> {
     final opened = await openWhatsApp(widget.request);
     Analytics.instance.track('whatsapp_opened', {'request_no': widget.request.number, 'ok': opened});
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ما انفتح الواتساب. تأكد إنو مثبّت وجرّب كمان مرة.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ما انفتح الواتساب. تأكد إنو مثبّت وجرّب كمان مرة.')));
     }
   }
 
@@ -97,15 +97,20 @@ class _SentPageState extends State<SentPage> {
                         const SizedBox(height: 6),
                         Text(request.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                         Text(
-                          '${request.size} · ${request.level}',
+                          [request.size, request.level].where((t) => t.isNotEmpty).join(' · '),
                           style: text.bodySmall,
                           textAlign: TextAlign.center,
                         ),
-                        Text(
-                          request.range,
-                          textDirection: TextDirection.ltr,
-                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.primaryDark),
-                        ),
+                        if (request.range.isNotEmpty)
+                          Text(
+                            request.range,
+                            textDirection: TextDirection.ltr,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
                       ],
                     ),
                   ),

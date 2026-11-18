@@ -44,6 +44,9 @@ class CalcInput {
     this.rooms = 3,
     this.baths = 2,
     this.level = FinishLevel.medium,
+    this.remote = false,
+    this.designId,
+    this.designTitle,
   });
 
   final RequestKind kind;
@@ -52,6 +55,13 @@ class CalcInput {
   final int rooms;
   final int baths;
   final FinishLevel level;
+
+  /// Asked from abroad («عمّرها وإنت برّا»).
+  final bool remote;
+
+  /// A ready design the customer picked ("بدي متل هاد").
+  final String? designId;
+  final String? designTitle;
 
   bool get isFull => kind == RequestKind.full;
 
@@ -74,6 +84,9 @@ class CalcInput {
     rooms: rooms ?? this.rooms,
     baths: baths ?? this.baths,
     level: level ?? this.level,
+    remote: remote,
+    designId: designId,
+    designTitle: designTitle,
   );
 
   /// Arguments shared by the `calc_estimate` and `submit_quote` RPCs.

@@ -3,9 +3,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
 import '../../data/estimate.dart';
+import '../../data/showcase.dart';
 import '../../services/partner.dart';
+import '../../services/showcase.dart';
 import '../../widgets/brand_mark.dart';
 import '../../widgets/common.dart';
+import '../showcase/gallery_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -109,6 +112,39 @@ class HomePage extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          _LinkCard(
+            icon: Icons.fact_check_outlined,
+            title: 'بدك تشتري شقة؟',
+            body: 'افحصها قبل ما تشتري: تقرير بالمشاكل وكلفة تصليحها.',
+            onTap: () => context.push('/inspection'),
+          ),
+          const SizedBox(height: 12),
+          _AbroadBanner(onTap: () => context.push('/abroad')),
+          _Showcase<GalleryProject>(
+            title: 'من شغل $sponsor',
+            load: Showcase.instance.gallery,
+            onAll: () => context.push('/gallery'),
+            card: (p) => ShowcaseCard(
+              width: 240,
+              imageUrl: p.cover?.url,
+              title: p.title,
+              subtitle: [p.workLabel, if (p.area != null) '${p.area} م²'].join(' · '),
+              onTap: () => context.push('/gallery/item', extra: p),
+            ),
+          ),
+          _Showcase<ReadyDesign>(
+            title: 'تصاميم جاهزة',
+            load: Showcase.instance.designs,
+            onAll: () => context.push('/designs'),
+            card: (d) => ShowcaseCard(
+              width: 160,
+              imageUrl: d.photos.firstOrNull?.url,
+              title: d.title,
+              subtitle: '${d.roomLabel} · ${d.styleLabel}',
+              onTap: () => context.push('/designs/item', extra: d),
+            ),
+          ),
           const SizedBox(height: 22),
           Text('كيف بتمشي؟', style: text.titleMedium),
           const SizedBox(height: 8),
@@ -144,8 +180,155 @@ class HomePage extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 14),
+          Center(
+            child: TextButton.icon(
+              onPressed: () => context.push('/verify'),
+              icon: const Icon(Icons.workspace_premium_outlined, size: 18),
+              label: const Text('عندك كود شقة موثّقة؟ تحقق منه'),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _LinkCard extends StatelessWidget {
+  const _LinkCard({required this.icon, required this.title, required this.body, required this.onTap});
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.cardLarge),
+        side: const BorderSide(color: AppColors.line),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.cardLarge),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: AppColors.primaryTint, borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, color: AppColors.primaryDark),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                    Text(body, style: const TextStyle(fontSize: 13, color: AppColors.inkSoft)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.arrow_forward_rounded, color: AppColors.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// «عمّرها وإنت برّا», for owners who live abroad.
+class _AbroadBanner extends StatelessWidget {
+  const _AbroadBanner({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.primaryTint,
+      borderRadius: BorderRadius.circular(AppRadius.cardLarge),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.cardLarge),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.flight_takeoff_rounded, color: AppColors.primaryDark, size: 28),
+              SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('عايش برّا سوريا؟', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                    Text(
+                      'عمّر بيتك وتابع كل مرحلة بالصور من مكانك.',
+                      style: TextStyle(fontSize: 13, color: AppColors.primaryDark),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_rounded, color: AppColors.primaryDark),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A titled row of photo cards; hidden while empty or unreachable.
+class _Showcase<T> extends StatefulWidget {
+  const _Showcase({required this.title, required this.load, required this.onAll, required this.card});
+
+  final String title;
+  final Future<List<T>> Function() load;
+  final VoidCallback onAll;
+  final Widget Function(T item) card;
+
+  @override
+  State<_Showcase<T>> createState() => _ShowcaseState<T>();
+}
+
+class _ShowcaseState<T> extends State<_Showcase<T>> {
+  late final Future<List<T>> _items = widget.load();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _items,
+      builder: (context, snap) {
+        final items = snap.data ?? const [];
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(child: Text(widget.title, style: Theme.of(context).textTheme.titleMedium)),
+                TextButton(onPressed: widget.onAll, child: const Text('عرض الكل')),
+              ],
+            ),
+            SizedBox(
+              height: 170,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: items.length,
+                separatorBuilder: (context, i) => const SizedBox(width: 10),
+                itemBuilder: (context, i) => widget.card(items[i]),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app/config.dart';
 import '../../app/theme.dart';
 import '../../data/estimate.dart';
 import '../../services/analytics.dart';
+import '../../services/customer.dart';
+import '../../services/home_files.dart';
 import '../../services/partner.dart';
 import '../../services/requests_store.dart';
 import '../../widgets/common.dart';
+import '../../widgets/photos.dart';
+import '../../widgets/request_extras.dart';
 import '../calculator/result_page.dart';
 
 class QuotePage extends StatefulWidget {
@@ -26,11 +31,15 @@ class _QuotePageState extends State<QuotePage> {
   final _phone = TextEditingController();
   final _area = TextEditingController();
   final _notes = TextEditingController();
+  final _country = TextEditingController();
+  final _agency = TextEditingController();
+  late var _remote = widget.args.input.remote;
+  var _photos = <XFile>[];
   var _sending = false;
 
   @override
   void dispose() {
-    for (final c in [_name, _phone, _area, _notes]) {
+    for (final c in [_name, _phone, _area, _notes, _country, _agency]) {
       c.dispose();
     }
     super.dispose();
@@ -44,7 +53,10 @@ class _QuotePageState extends State<QuotePage> {
     try {
       int number;
       var estimate = widget.args.estimate;
+      String? requestId;
       if (AppConfig.hasBackend) {
+        // An account makes the home file and the photos the customer's own.
+        await Customer.instance.ensureSignedIn();
         final json = await Supabase.instance.client.rpc(
           'submit_quote',
           params: {
@@ -54,18 +66,26 @@ class _QuotePageState extends State<QuotePage> {
             'p_area_text': _area.text,
             'p_notes': _notes.text,
             ...input.rpcParams,
+            'p_remote': _remote,
+            'p_country': _remote ? _country.text : null,
+            'p_design_id': input.designId,
+            'p_agency_code': _agency.text.trim().isEmpty ? null : _agency.text.trim(),
           },
         ).timeout(AppConfig.requestTimeout) as Map<String, dynamic>;
         Partner.instance.apply(json);
         number = (json['request_no'] as num).toInt();
+        requestId = json['request_id'] as String?;
         // The server prices it again; its numbers are the ones on the request.
         estimate = Estimate.fromJson(json);
       } else {
         number = RequestsStore.instance.nextDemoNumber;
       }
+      if (requestId != null && _photos.isNotEmpty) {
+        await HomeFiles.uploadIntake(requestId: requestId, number: number, photos: _photos);
+      }
       final request = SavedRequest(
         number: number,
-        title: input.title,
+        title: input.designTitle == null ? input.title : '${input.title} · تصميم ${input.designTitle}',
         size: input.sizeLabel,
         level: input.level.label,
         range: estimate.range,
@@ -126,6 +146,11 @@ class _QuotePageState extends State<QuotePage> {
                                   '${input.sizeLabel} · ${input.level.label}',
                                   style: const TextStyle(fontSize: 13, color: AppColors.inkSoft),
                                 ),
+                                if (input.designTitle != null)
+                                  Text(
+                                    'التصميم: ${input.designTitle}',
+                                    style: const TextStyle(fontSize: 13, color: AppColors.primaryDark),
+                                  ),
                               ],
                             ),
                           ),
@@ -147,6 +172,16 @@ class _QuotePageState extends State<QuotePage> {
                       controller: _notes,
                       lines: 3,
                     ),
+                    AbroadField(remote: _remote, onChanged: (v) => setState(() => _remote = v), country: _country),
+                    const SizedBox(height: 4),
+                    AgencyCodeField(controller: _agency),
+                    const SizedBox(height: 16),
+                    PhotoPickerField(
+                      photos: _photos,
+                      onChanged: (p) => setState(() => _photos = p),
+                      hint: 'صوّر الشقة إذا فيك (اختياري): بيساعد الفريق يعطيك سعر أدق قبل المعاينة.',
+                    ),
+                    const SizedBox(height: 16),
                     ValueListenableBuilder(
                       valueListenable: Partner.instance.sponsorName,
                       builder: (context, sponsor, _) => NoteRow(

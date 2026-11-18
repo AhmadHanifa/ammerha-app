@@ -101,7 +101,7 @@ class Push {
   void _showBanner(RemoteMessage message) {
     final n = message.notification;
     final screen = message.data['screen'] as String?;
-    if (screen == 'requests') unawaited(RequestsStore.instance.refreshStatuses());
+    if (screen != null && screen.startsWith('request')) unawaited(RequestsStore.instance.refreshStatuses());
     if (n == null) return;
     messengerKey.currentState?.showSnackBar(
       SnackBar(
