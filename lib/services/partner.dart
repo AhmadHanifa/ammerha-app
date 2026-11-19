@@ -14,7 +14,7 @@ class Partner {
   static const _nameKey = 'partner.sponsor_name';
   static const _numberKey = 'partner.whatsapp_number';
 
-  final sponsorName = ValueNotifier<String>('سنديان');
+  final sponsorName = ValueNotifier<String>('عمّرها');
 
   /// Digits with the country code, or empty until it is set in the dashboard.
   String whatsappNumber = '';

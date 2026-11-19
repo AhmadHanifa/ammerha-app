@@ -1,3 +1,4 @@
+import 'package:ammerha/data/article.dart';
 import 'package:ammerha/data/estimate.dart';
 import 'package:ammerha/data/providers.dart';
 import 'package:ammerha/features/providers/providers_page.dart';
@@ -46,7 +47,7 @@ void main() {
     await tester.pumpWidget(const AmmerhaApp(useGoogleFonts: false));
     await tester.pump(const Duration(milliseconds: 1600));
     expect(find.text('عمّرها'), findsNWidgets(2), reason: 'the intro name over the home logo');
-    expect(find.text('برعاية سنديان'), findsNWidgets(2));
+    expect(find.text('إكساء بيتك، بثقة'), findsOneWidget);
     await tester.pumpAndSettle();
     expect(find.text('عمّرها'), findsOneWidget);
 
@@ -62,7 +63,7 @@ void main() {
   testWidgets('a full apartment: calculator, range, quote form, then a request number', (tester) async {
     await _startApp(tester);
     expect(find.text('بدك إكساء شقة كاملة، ولا خدمة وحدة؟'), findsOneWidget);
-    expect(find.text('برعاية سنديان'), findsOneWidget);
+    expect(find.textContaining('سنديان'), findsNothing);
 
     await _tapText(tester, 'ابدأ الحساب');
     expect(find.text('قديش مساحة الشقة؟'), findsOneWidget);
@@ -79,7 +80,7 @@ void main() {
     await _tapText(tester, 'التالي');
     await _tapText(tester, 'احسب الكلفة');
     expect(find.text('8,200 – 11,500 \$'), findsOneWidget);
-    expect(find.text('هاد سعر تقريبي. السعر النهائي بيحدده فريق سنديان بعد المعاينة.'), findsOneWidget);
+    expect(find.text('هاد سعر تقريبي. السعر النهائي بيحدده فريق عمّرها بعد المعاينة.'), findsOneWidget);
 
     await _tapText(tester, 'اطلب عرض سعر');
     await tester.enterText(find.byType(TextFormField).at(0), 'أبو محمد');
@@ -172,5 +173,26 @@ void main() {
     expect(find.text('موثّق من عمّرها'), findsOneWidget);
     expect(find.text('اطلب منه عرض سعر'), findsOneWidget);
     expect(find.text('لسا ما في تقييمات.'), findsOneWidget);
+  });
+
+  test('article bodies split into headings, paragraphs and bullets', () {
+    final blocks = parseArticle('مقدمة قصيرة\nبسطرين\n\n## الأسئلة\n- أول\n- تاني\nخاتمة');
+    expect(blocks.length, 4);
+    expect((blocks[0] as ParagraphBlock).text, 'مقدمة قصيرة بسطرين');
+    expect((blocks[1] as HeadingBlock).text, 'الأسئلة');
+    expect((blocks[2] as BulletsBlock).items, ['أول', 'تاني']);
+    expect((blocks[3] as ParagraphBlock).text, 'خاتمة');
+  });
+
+  testWidgets('tips is a tab, and technicians have a way in from home', (tester) async {
+    await _startApp(tester);
+    await tester.tap(find.text('نصايح'));
+    await tester.pumpAndSettle();
+    expect(find.text('شو تسأل، شو تفحص، وشو تكتب، لحتى ما حدا يضحك عليك.'), findsOneWidget);
+
+    await tester.tap(find.text('الرئيسية'));
+    await tester.pumpAndSettle();
+    await _tapText(tester, 'إنت فني أو مهندس؟');
+    expect(find.text('انضم لعمّرها'), findsOneWidget);
   });
 }

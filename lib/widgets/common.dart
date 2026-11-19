@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
-import '../services/partner.dart';
 
 class AppCard extends StatelessWidget {
   const AppCard({super.key, required this.child, this.padding = EdgeInsets.zero, this.radius = AppRadius.card + 2});
@@ -41,37 +40,6 @@ class Pill extends StatelessWidget {
   }
 }
 
-/// "برعاية سنديان": on every screen, with the name the dashboard sets.
-class SponsorBadge extends StatelessWidget {
-  const SponsorBadge({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder(
-      valueListenable: Partner.instance.sponsorName,
-      builder: (context, name, _) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-        decoration: BoxDecoration(color: AppColors.primaryTint, borderRadius: BorderRadius.circular(999)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.verified_outlined, size: 14, color: AppColors.primaryDark),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                'برعاية $name',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, height: 1.6, fontWeight: FontWeight.w500, color: AppColors.primaryDark),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Square back button; the arrow follows the reading direction.
 class BackSquareButton extends StatelessWidget {
   const BackSquareButton({super.key, required this.onPressed});
@@ -97,7 +65,7 @@ class BackSquareButton extends StatelessWidget {
   }
 }
 
-/// The top of an inner screen: back button, title and the sponsor badge.
+/// The top of an inner screen: back button and title.
 class ScreenHeader extends StatelessWidget {
   const ScreenHeader({super.key, required this.title, this.onBack});
 
@@ -120,8 +88,6 @@ class ScreenHeader extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 22),
           ),
         ),
-        const SizedBox(width: 8),
-        const Flexible(child: SponsorBadge()),
       ],
     );
   }

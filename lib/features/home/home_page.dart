@@ -35,10 +35,6 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               const Text('عمّرها', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Align(alignment: AlignmentDirectional.centerEnd, child: SponsorBadge()),
-              ),
             ],
           ),
           const SizedBox(height: 18),
@@ -131,7 +127,7 @@ class HomePage extends StatelessWidget {
             card: (p) => ProviderTile(provider: p, width: 280),
           ),
           _Showcase<GalleryProject>(
-            title: 'من شغل $sponsor',
+            title: 'معرض الأعمال',
             load: Showcase.instance.gallery,
             onAll: () => context.push('/gallery'),
             card: (p) => ShowcaseCard(
@@ -190,6 +186,14 @@ class HomePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
+          const SizedBox(height: 8),
+          _LinkCard(
+            icon: Icons.handyman_outlined,
+            title: 'إنت فني أو مهندس؟',
+            body: 'سجّل ببلاش، وخلي شغلك يجيبلك زباين بتقييمات حقيقية.',
+            onTap: () => context.push('/join'),
+          ),
+          const SizedBox(height: 6),
           Center(
             child: TextButton.icon(
               onPressed: () => context.push('/verify'),

@@ -51,7 +51,10 @@ class _AmmerhaAppState extends State<AmmerhaApp> {
     // 'request:107' opens that request's file; the others open a screen.
     Push.instance.onOpen = (screen) => switch (screen.split(':')) {
       ['request', final no] when int.tryParse(no) != null => _router.go('/request/$no'),
+      ['job', final no] when int.tryParse(no) != null => _router.go('/pro/job/$no'),
+      ['pro'] => _router.go('/pro'),
       ['requests'] => _router.go('/?tab=requests'),
+      ['tips'] => _router.go('/?tab=tips'),
       ['calculator'] => _router.go('/calculator'),
       ['gallery'] => _router.go('/gallery'),
       ['designs'] => _router.go('/designs'),

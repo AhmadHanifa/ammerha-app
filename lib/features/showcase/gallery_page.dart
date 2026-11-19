@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../data/estimate.dart';
 import '../../data/showcase.dart';
-import '../../services/partner.dart';
 import '../../services/showcase.dart';
 import '../../widgets/common.dart';
 import '../../widgets/photos.dart';
@@ -29,10 +28,7 @@ class _GalleryPageState extends State<GalleryPage> {
           builder: (context, snap) => ListView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
             children: [
-              ValueListenableBuilder(
-                valueListenable: Partner.instance.sponsorName,
-                builder: (context, sponsor, _) => ScreenHeader(title: 'من شغل $sponsor', onBack: () => context.pop()),
-              ),
+              ScreenHeader(title: 'معرض الأعمال', onBack: () => context.pop()),
               const SizedBox(height: 16),
               if (snap.hasError)
                 _Retry(onRetry: () => setState(() => _projects = Showcase.instance.gallery(refresh: true)))

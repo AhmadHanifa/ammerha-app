@@ -121,6 +121,31 @@ class _ResultPageState extends State<ResultPage> {
                             text: 'هاد سعر تقريبي. السعر النهائي بيحدده فريق $sponsor بعد المعاينة.',
                           ),
                         ),
+                        const SizedBox(height: 10),
+                        Material(
+                          color: AppColors.primarySoft,
+                          borderRadius: BorderRadius.circular(AppRadius.card),
+                          child: InkWell(
+                            onTap: () => context.go('/?tab=tips'),
+                            borderRadius: BorderRadius.circular(AppRadius.card),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.lightbulb_outline_rounded, color: AppColors.primaryDark, size: 20),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'قبل ما تتفق مع أي معلم: شو تسأل وشو تكتب بالعقد',
+                                      style: TextStyle(fontSize: 14, color: AppColors.primaryDark),
+                                    ),
+                                  ),
+                                  Icon(Icons.arrow_forward_rounded, color: AppColors.primaryDark, size: 18),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                         if (estimate.smallJob case final small?) ...[
                           const SizedBox(height: 10),
                           NoteRow(

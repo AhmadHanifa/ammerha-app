@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app/config.dart';
+import '../data/article.dart';
 import '../data/providers.dart';
 import '../data/showcase.dart';
 
@@ -12,6 +13,38 @@ class Showcase {
   Future<List<GalleryProject>>? _gallery;
   Future<List<ReadyDesign>>? _designs;
   Future<List<Provider>>? _providers;
+  Future<List<Article>>? _articles;
+
+  Future<List<Article>> articles({bool refresh = false}) {
+    if (refresh) _articles = null;
+    return _articles ??= _loadArticles().catchError((Object e) {
+      _articles = null;
+      throw e;
+    });
+  }
+
+  Future<List<Article>> _loadArticles() async {
+    if (!AppConfig.hasBackend) return const [];
+    final rows = await Supabase.instance.client
+        .from('articles')
+        .select('id, title, summary, category, service, body, checklist, cover_path')
+        .order('sort')
+        .order('created_at', ascending: false)
+        .timeout(AppConfig.requestTimeout);
+    return [
+      for (final r in rows)
+        Article(
+          id: r['id'] as String,
+          title: r['title'] as String,
+          category: r['category'] as String,
+          body: r['body'] as String? ?? '',
+          checklist: ((r['checklist'] as List?) ?? const []).cast<String>(),
+          summary: r['summary'] as String?,
+          service: r['service'] as String?,
+          coverUrl: r['cover_path'] == null ? null : _url(r['cover_path'] as String),
+        ),
+    ];
+  }
 
   Future<List<Provider>> providers({bool refresh = false}) {
     if (refresh) _providers = null;

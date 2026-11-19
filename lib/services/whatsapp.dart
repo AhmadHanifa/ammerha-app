@@ -15,3 +15,22 @@ Future<bool> openWhatsApp(SavedRequest request) async {
     return false;
   }
 }
+
+/// Digits for a wa.me link; Syrian local numbers (09…) get the country code.
+String waPhone(String raw) {
+  var d = raw.replaceAll(RegExp(r'\D'), '');
+  if (d.startsWith('00')) d = d.substring(2);
+  if (d.startsWith('0')) return '963${d.substring(1)}';
+  if (d.length == 9 && d.startsWith('9')) return '963$d';
+  return d;
+}
+
+/// Opens a chat with any number, as a provider does with their customer.
+Future<bool> openChat(String phone, String text) async {
+  final uri = Uri.https('wa.me', '/${waPhone(phone)}', {'text': text});
+  try {
+    return await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (_) {
+    return false;
+  }
+}

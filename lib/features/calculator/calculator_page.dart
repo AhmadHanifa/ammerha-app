@@ -79,8 +79,6 @@ class _CalculatorPageState extends State<CalculatorPage> {
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 14),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Flexible(child: SponsorBadge()),
                 ],
               ),
               const SizedBox(height: 20),

@@ -71,7 +71,6 @@ class _SentPageState extends State<SentPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
                 children: [
-                  const Align(alignment: AlignmentDirectional.centerEnd, child: SponsorBadge()),
                   const SizedBox(height: 28),
                   Center(
                     child: Container(

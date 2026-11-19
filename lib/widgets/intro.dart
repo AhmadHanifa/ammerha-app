@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
 import '../app/transitions.dart';
-import '../services/partner.dart';
 import 'brand_mark.dart';
 
 /// The opening animation, over the first screen on a cold start: the mark
-/// draws itself on brand green, the name rises in, the sponsor line follows,
+/// draws itself on brand green, the name rises in, the tagline follows,
 /// then the green lifts away to reveal the home screen. A tap skips it.
 class IntroOverlay extends StatefulWidget {
   const IntroOverlay({super.key, required this.child, this.enabled = true});
@@ -18,18 +17,13 @@ class IntroOverlay extends StatefulWidget {
   State<IntroOverlay> createState() => _IntroOverlayState();
 }
 
-class _IntroOverlayState extends State<IntroOverlay>
-    with SingleTickerProviderStateMixin {
+class _IntroOverlayState extends State<IntroOverlay> with SingleTickerProviderStateMixin {
   static const _length = Duration(milliseconds: 2400);
 
   late final _controller = AnimationController(vsync: this, duration: _length);
   late var _done = !widget.enabled;
 
-  Animation<double> _part(
-    double from,
-    double to, [
-    Curve curve = Motion.curve,
-  ]) => CurvedAnimation(
+  Animation<double> _part(double from, double to, [Curve curve = Motion.curve]) => CurvedAnimation(
     parent: _controller,
     curve: Interval(from, to, curve: curve),
   );
@@ -38,7 +32,7 @@ class _IntroOverlayState extends State<IntroOverlay>
   late final _body = _part(0.16, 0.48, Curves.easeInOutCubic);
   late final _name = _part(0.38, 0.62);
   late final _line = _part(0.50, 0.72);
-  late final _sponsor = _part(0.56, 0.78);
+  late final _tagline = _part(0.56, 0.78);
   late final _exit = _part(0.82, 1.0, Curves.easeInCubic);
 
   @override
@@ -104,11 +98,7 @@ class _IntroOverlayState extends State<IntroOverlay>
                           SizedBox.square(
                             dimension: 112,
                             child: CustomPaint(
-                              painter: BrandMarkPainter(
-                                roof: _roof.value,
-                                body: _body.value,
-                                stroke: 0.07,
-                              ),
+                              painter: BrandMarkPainter(roof: _roof.value, body: _body.value, stroke: 0.07),
                             ),
                           ),
                           const SizedBox(height: 18),
@@ -133,26 +123,17 @@ class _IntroOverlayState extends State<IntroOverlay>
                             width: 56 * _line.value,
                             height: 2,
                             decoration: BoxDecoration(
-                              color: AppColors.primaryTint.withValues(
-                                alpha: 0.7,
-                              ),
+                              color: AppColors.primaryTint.withValues(alpha: 0.7),
                               borderRadius: BorderRadius.circular(1),
                             ),
                           ),
                           const SizedBox(height: 10),
                           Opacity(
-                            opacity: _sponsor.value,
-                            child: ValueListenableBuilder(
-                              valueListenable: Partner.instance.sponsorName,
-                              builder: (context, name, _) => Text(
-                                'برعاية $name',
-                                textDirection: TextDirection.rtl,
-                                style: const TextStyle(
-                                  color: AppColors.primaryTint,
-                                  fontSize: 15,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
+                            opacity: _tagline.value,
+                            child: Text(
+                              'إكساء بيتك، بثقة',
+                              textDirection: TextDirection.rtl,
+                              style: const TextStyle(color: AppColors.primaryTint, fontSize: 15, letterSpacing: 0.2),
                             ),
                           ),
                         ],

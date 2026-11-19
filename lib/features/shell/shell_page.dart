@@ -8,13 +8,14 @@ import '../../data/estimate.dart';
 import '../../services/analytics.dart';
 import '../home/home_page.dart';
 import '../requests/requests_page.dart';
+import '../tips/tips_page.dart';
 
 /// Bottom-navigation shell; tabs switch with a fade-through.
 class ShellPage extends StatefulWidget {
-  const ShellPage({super.key, this.showRequests = false});
+  const ShellPage({super.key, this.tab});
 
-  /// Opens on "طلباتي", as a notification about a request does.
-  final bool showRequests;
+  /// 'requests' or 'tips' to open on that tab, as a notification or a link does.
+  final String? tab;
 
   @override
   State<ShellPage> createState() => _ShellPageState();
@@ -22,14 +23,21 @@ class ShellPage extends StatefulWidget {
 
 class _ShellPageState extends State<ShellPage> {
   static const _calculatorIndex = 1;
-  late var _index = widget.showRequests ? _requestsIndex : 0;
+  late var _index = _indexFor(widget.tab);
 
-  static const _requestsIndex = 2;
+  static const _tipsIndex = 2;
+  static const _requestsIndex = 3;
+
+  static int _indexFor(String? tab) => switch (tab) {
+    'requests' => _requestsIndex,
+    'tips' => _tipsIndex,
+    _ => 0,
+  };
 
   @override
   void didUpdateWidget(ShellPage old) {
     super.didUpdateWidget(old);
-    if (widget.showRequests && !old.showRequests) _index = _requestsIndex;
+    if (widget.tab != old.tab && widget.tab != null) _index = _indexFor(widget.tab);
   }
 
   void _select(int i) {
@@ -42,7 +50,11 @@ class _ShellPageState extends State<ShellPage> {
 
   @override
   Widget build(BuildContext context) {
-    final tab = _index == 0 ? const HomePage() : const RequestsPage();
+    final tab = switch (_index) {
+      0 => const HomePage(),
+      _tipsIndex => const TipsPage(),
+      _ => const RequestsPage(),
+    };
 
     return Scaffold(
       body: SafeArea(
@@ -56,7 +68,11 @@ class _ShellPageState extends State<ShellPage> {
           ),
           child: ScreenTracker(
             key: ValueKey(_index),
-            name: _index == 0 ? 'home' : 'requests',
+            name: switch (_index) {
+              0 => 'home',
+              _tipsIndex => 'tips',
+              _ => 'requests',
+            },
             child: tab,
           ),
         ),
@@ -71,6 +87,11 @@ class _ShellPageState extends State<ShellPage> {
           destinations: const [
             NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
             NavigationDestination(icon: Icon(Icons.calculate_outlined), label: 'الحاسبة'),
+            NavigationDestination(
+              icon: Icon(Icons.lightbulb_outline_rounded),
+              selectedIcon: Icon(Icons.lightbulb_rounded),
+              label: 'نصايح',
+            ),
             NavigationDestination(icon: Icon(Icons.inbox_outlined), selectedIcon: Icon(Icons.inbox_rounded), label: 'طلباتي'),
           ],
         ),

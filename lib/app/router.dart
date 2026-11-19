@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../data/article.dart';
 import '../data/estimate.dart';
 import '../data/providers.dart';
 import '../data/showcase.dart';
@@ -7,6 +8,9 @@ import '../features/abroad/abroad_page.dart';
 import '../features/calculator/calculator_page.dart';
 import '../features/calculator/result_page.dart';
 import '../features/inspection/inspection_page.dart';
+import '../features/pro/job_page.dart';
+import '../features/pro/join_page.dart';
+import '../features/pro/pro_page.dart';
 import '../features/providers/providers_page.dart';
 import '../features/quote/quote_page.dart';
 import '../features/quote/sent_page.dart';
@@ -15,6 +19,7 @@ import '../features/services/services_page.dart';
 import '../features/showcase/designs_page.dart';
 import '../features/showcase/gallery_page.dart';
 import '../features/shell/shell_page.dart';
+import '../features/tips/tips_page.dart';
 import '../features/verify/verify_page.dart';
 import '../services/analytics.dart';
 import '../services/requests_store.dart';
@@ -27,7 +32,7 @@ GoRouter createRouter() => GoRouter(
       path: '/',
       pageBuilder: (context, state) => sharedAxisPage(
         key: state.pageKey,
-        child: ShellPage(showRequests: state.uri.queryParameters['tab'] == 'requests'),
+        child: ShellPage(tab: state.uri.queryParameters['tab']),
       ),
     ),
     GoRoute(
@@ -113,6 +118,36 @@ GoRouter createRouter() => GoRouter(
       pageBuilder: (context, state) => sharedAxisPage(
         key: state.pageKey,
         child: ScreenTracker(name: 'provider', child: ProviderPage(provider: state.extra! as Provider)),
+      ),
+    ),
+    GoRoute(
+      path: '/tips/item',
+      redirect: (context, state) => state.extra is Article ? null : '/?tab=tips',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: ScreenTracker(name: 'article', child: ArticlePage(article: state.extra! as Article)),
+      ),
+    ),
+    GoRoute(
+      path: '/join',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: const ScreenTracker(name: 'join', child: JoinPage()),
+      ),
+    ),
+    GoRoute(
+      path: '/pro',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: const ScreenTracker(name: 'pro', child: ProPage()),
+      ),
+    ),
+    GoRoute(
+      path: '/pro/job/:no',
+      redirect: (context, state) => int.tryParse(state.pathParameters['no'] ?? '') == null ? '/pro' : null,
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: ScreenTracker(name: 'pro_job', child: JobPage(number: int.parse(state.pathParameters['no']!))),
       ),
     ),
     GoRoute(
