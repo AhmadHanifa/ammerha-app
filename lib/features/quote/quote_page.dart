@@ -69,6 +69,7 @@ class _QuotePageState extends State<QuotePage> {
             'p_remote': _remote,
             'p_country': _remote ? _country.text : null,
             'p_design_id': input.designId,
+            'p_provider_id': input.providerId,
             'p_agency_code': _agency.text.trim().isEmpty ? null : _agency.text.trim(),
           },
         ).timeout(AppConfig.requestTimeout) as Map<String, dynamic>;
@@ -146,6 +147,11 @@ class _QuotePageState extends State<QuotePage> {
                                   '${input.sizeLabel} · ${input.level.label}',
                                   style: const TextStyle(fontSize: 13, color: AppColors.inkSoft),
                                 ),
+                                if (input.providerName != null)
+                                  Text(
+                                    'طلبته من: ${input.providerName}',
+                                    style: const TextStyle(fontSize: 13, color: AppColors.primaryDark),
+                                  ),
                                 if (input.designTitle != null)
                                   Text(
                                     'التصميم: ${input.designTitle}',

@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app/config.dart';
+import '../data/providers.dart';
 import '../data/showcase.dart';
 
 /// Published gallery projects and ready designs, kept for the session.
@@ -10,6 +11,52 @@ class Showcase {
 
   Future<List<GalleryProject>>? _gallery;
   Future<List<ReadyDesign>>? _designs;
+  Future<List<Provider>>? _providers;
+
+  Future<List<Provider>> providers({bool refresh = false}) {
+    if (refresh) _providers = null;
+    return _providers ??= _loadProviders().catchError((Object e) {
+      _providers = null;
+      throw e;
+    });
+  }
+
+  Future<List<ProviderReview>> reviews(String providerId) async {
+    if (!AppConfig.hasBackend) return const [];
+    final rows = await Supabase.instance.client
+        .rpc('provider_reviews', params: {'p_provider_id': providerId})
+        .timeout(AppConfig.requestTimeout) as List;
+    return [for (final r in rows.cast<Map<String, dynamic>>()) ProviderReview.fromJson(r)];
+  }
+
+  Future<List<Provider>> _loadProviders() async {
+    if (!AppConfig.hasBackend) return const [];
+    final rows = await Supabase.instance.client.rpc('provider_directory').timeout(AppConfig.requestTimeout) as List;
+    return [
+      for (final r in rows.cast<Map<String, dynamic>>())
+        Provider(
+          id: r['id'] as String,
+          kind: r['kind'] as String,
+          name: r['name'] as String,
+          services: ((r['services'] as List?) ?? const []).cast<String>(),
+          photos: [
+            for (final p in ((r['photos'] as List?) ?? const []).cast<Map<String, dynamic>>())
+              ShowcasePhoto(url: _url(p['path'] as String), caption: p['caption'] as String?),
+          ],
+          jobs: (r['jobs'] as num? ?? 0).toInt(),
+          reviews: (r['reviews'] as num? ?? 0).toInt(),
+          claims: (r['claims'] as num? ?? 0).toInt(),
+          claimsFixed: (r['claims_fixed'] as num? ?? 0).toInt(),
+          specialty: r['specialty'] as String?,
+          area: r['area'] as String?,
+          bio: r['bio'] as String?,
+          photoUrl: r['photo_path'] == null ? null : _url(r['photo_path'] as String),
+          years: (r['years'] as num?)?.toInt(),
+          verified: r['is_verified'] == true,
+          rating: r['rating'] as num?,
+        ),
+    ];
+  }
 
   Future<List<GalleryProject>> gallery({bool refresh = false}) {
     if (refresh) _gallery = null;
@@ -26,6 +73,8 @@ class Showcase {
       throw e;
     });
   }
+
+  static String publicUrl(String path) => _url(path);
 
   static String _url(String path) => Supabase.instance.client.storage.from('public-media').getPublicUrl(path);
 

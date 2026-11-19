@@ -47,6 +47,8 @@ class CalcInput {
     this.remote = false,
     this.designId,
     this.designTitle,
+    this.providerId,
+    this.providerName,
   });
 
   final RequestKind kind;
@@ -62,6 +64,10 @@ class CalcInput {
   /// A ready design the customer picked ("بدي متل هاد").
   final String? designId;
   final String? designTitle;
+
+  /// A technician, engineer or contractor the customer asked for by name.
+  final String? providerId;
+  final String? providerName;
 
   bool get isFull => kind == RequestKind.full;
 
@@ -87,6 +93,8 @@ class CalcInput {
     remote: remote,
     designId: designId,
     designTitle: designTitle,
+    providerId: providerId,
+    providerName: providerName,
   );
 
   /// Arguments shared by the `calc_estimate` and `submit_quote` RPCs.

@@ -3,11 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
 import '../../data/estimate.dart';
+import '../../data/providers.dart';
 import '../../data/showcase.dart';
 import '../../services/partner.dart';
 import '../../services/showcase.dart';
 import '../../widgets/brand_mark.dart';
 import '../../widgets/common.dart';
+import '../providers/providers_page.dart';
 import '../showcase/gallery_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -121,6 +123,13 @@ class HomePage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _AbroadBanner(onTap: () => context.push('/abroad')),
+          _Showcase<Provider>(
+            title: 'فنيين ومهندسين موثّقين',
+            load: Showcase.instance.providers,
+            onAll: () => context.push('/providers'),
+            height: 96,
+            card: (p) => ProviderTile(provider: p, width: 280),
+          ),
           _Showcase<GalleryProject>(
             title: 'من شغل $sponsor',
             load: Showcase.instance.gallery,
@@ -286,12 +295,13 @@ class _AbroadBanner extends StatelessWidget {
 
 /// A titled row of photo cards; hidden while empty or unreachable.
 class _Showcase<T> extends StatefulWidget {
-  const _Showcase({required this.title, required this.load, required this.onAll, required this.card});
+  const _Showcase({required this.title, required this.load, required this.onAll, required this.card, this.height = 170});
 
   final String title;
   final Future<List<T>> Function() load;
   final VoidCallback onAll;
   final Widget Function(T item) card;
+  final double height;
 
   @override
   State<_Showcase<T>> createState() => _ShowcaseState<T>();
@@ -318,7 +328,7 @@ class _ShowcaseState<T> extends State<_Showcase<T>> {
               ],
             ),
             SizedBox(
-              height: 170,
+              height: widget.height,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: items.length,

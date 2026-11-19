@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/config.dart';
 import '../../app/theme.dart';
 import '../../data/estimate.dart';
 import '../../data/home_file.dart';
+import '../../data/providers.dart';
 import '../../data/showcase.dart';
 import '../../services/analytics.dart';
 import '../../services/home_files.dart';
 import '../../services/requests_store.dart';
 import '../../widgets/common.dart';
 import '../../widgets/photos.dart';
+import '../../widgets/rating.dart';
+import '../providers/providers_page.dart';
 
 /// ملف البيت: one request's stages with their photos and the customer's
 /// approval, the wiring map, the materials to confirm, payments, the
@@ -27,10 +31,16 @@ class RequestFilePage extends StatefulWidget {
 }
 
 class _RequestFilePageState extends State<RequestFilePage> {
-  late Future<RequestFile> _file = HomeFiles.load(widget.number);
+  late Future<(RequestFile, RequestExtras?)> _file = _load();
+
+  /// The file, and its provider, review and warranty calls when the server has them.
+  Future<(RequestFile, RequestExtras?)> _load() async {
+    final extras = HomeFiles.extras(widget.number).then<RequestExtras?>((e) => e, onError: (_) => null);
+    return (await HomeFiles.load(widget.number), await extras);
+  }
 
   void _reload() {
-    setState(() => _file = HomeFiles.load(widget.number));
+    setState(() => _file = _load());
     RequestsStore.instance.refreshStatuses();
   }
 
@@ -82,7 +92,8 @@ class _RequestFilePageState extends State<RequestFilePage> {
         child: FutureBuilder(
           future: _file,
           builder: (context, snap) {
-            final file = snap.data;
+            final file = snap.data?.$1;
+            final extras = snap.data?.$2;
             return RefreshIndicator(
               onRefresh: () async => _reload(),
               child: ListView(
@@ -100,7 +111,7 @@ class _RequestFilePageState extends State<RequestFilePage> {
                       child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
                     )
                   else
-                    ..._sections(file),
+                    ..._sections(file, extras),
                 ],
               ),
             );
@@ -110,7 +121,27 @@ class _RequestFilePageState extends State<RequestFilePage> {
     );
   }
 
-  List<Widget> _sections(RequestFile f) {
+  Future<void> _review(RequestFile f, RequestExtras extras) async {
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _ReviewSheet(number: f.number, providerName: extras.provider!.name, current: extras.review),
+    );
+    if (saved == true) _reload();
+  }
+
+  Future<void> _claim(RequestFile f) async {
+    final sent = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _ClaimSheet(requestId: f.requestId, number: f.number),
+    );
+    if (sent == true) _reload();
+  }
+
+  List<Widget> _sections(RequestFile f, RequestExtras? extras) {
     final text = Theme.of(context).textTheme;
     final stagePhotos = f.category('stage');
     final wiring = f.category('wiring');
@@ -131,8 +162,62 @@ class _RequestFilePageState extends State<RequestFilePage> {
       ),
     );
 
+    final claimPhotos = f.category('claim');
+
     return [
       _Summary(file: f),
+      if (extras?.provider case final p?) ...[
+        title('مين عم يشتغل'),
+        AppCard(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              ProviderAvatar(name: p.name, url: p.photoUrl, verified: p.verified, size: 48),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(p.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    if (p.role.isNotEmpty) Text(p.role, style: text.bodySmall),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      if (extras != null && extras.canReview && extras.provider != null) ...[
+        title('تقييمك'),
+        if (extras.review case final r?) ...[
+          ReviewCard(review: r),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(onPressed: () => _review(f, extras), child: const Text('عدّل التقييم')),
+          ),
+        ] else
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: AppColors.primaryTint, borderRadius: BorderRadius.circular(AppRadius.card + 2)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('كيف كان الشغل مع ${extras.provider!.name}؟', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                const Text(
+                  'تقييمك بيساعد غيرك يختار، وبيكبّر سمعة اللي اشتغل منيح.',
+                  style: TextStyle(fontSize: 13, color: AppColors.primaryDark),
+                ),
+                const SizedBox(height: 10),
+                FilledButton(
+                  onPressed: () => _review(f, extras),
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                  child: const Text('قيّم الشغل'),
+                ),
+              ],
+            ),
+          ),
+      ],
       if (f.certificate case final cert?) ...[
         title('الشهادة'),
         _CertificateCard(
@@ -241,6 +326,24 @@ class _RequestFilePageState extends State<RequestFilePage> {
             ],
           ),
         ),
+      ],
+      if (extras != null && !f.isInspection && (extras.canClaim || extras.claims.isNotEmpty)) ...[
+        title('الضمان', hint: extras.canClaim ? 'إذا صار شي بالشغل خلال مدة الضمان، بلّغ من هون.' : null),
+        for (final c in extras.claims) ...[
+          _ClaimTile(claim: c),
+          const SizedBox(height: 8),
+        ],
+        if (claimPhotos.isNotEmpty) ...[
+          PhotoStrip(urls: [for (final m in claimPhotos) m.url]),
+          const SizedBox(height: 8),
+        ],
+        if (extras.canClaim)
+          OutlinedButton.icon(
+            onPressed: () => _claim(f),
+            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            icon: const Icon(Icons.report_problem_outlined),
+            label: const Text('عندي مشكلة'),
+          ),
       ],
       if (intake.isNotEmpty) ...[
         title('الصور اللي بعتّها'),
@@ -632,6 +735,232 @@ class _CertificateCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ClaimTile extends StatelessWidget {
+  const _ClaimTile({required this.claim});
+
+  final WarrantyClaim claim;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = claim;
+    final (bg, fg) = switch (c.status) {
+      'fixed' => (AppColors.primaryTint, AppColors.primaryDark),
+      'rejected' => (const Color(0xFFF6E3E0), AppColors.priceUp),
+      _ => (AppColors.freshBg, AppColors.freshFg),
+    };
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(shortDate(c.createdAt), style: Theme.of(context).textTheme.bodySmall)),
+              Pill(label: c.label, background: bg, foreground: fg),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(c.description, style: const TextStyle(fontSize: 15)),
+          if (c.staffNote != null) ...[
+            const SizedBox(height: 4),
+            Text('رد الفريق: ${c.staffNote}', style: const TextStyle(fontSize: 13, color: AppColors.primaryDark)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Rates the provider of a finished job: overall, then three details.
+class _ReviewSheet extends StatefulWidget {
+  const _ReviewSheet({required this.number, required this.providerName, this.current});
+
+  final int number;
+  final String providerName;
+  final ProviderReview? current;
+
+  @override
+  State<_ReviewSheet> createState() => _ReviewSheetState();
+}
+
+class _ReviewSheetState extends State<_ReviewSheet> {
+  late int _rating = widget.current?.rating ?? 0;
+  late int? _punctuality = widget.current?.punctuality;
+  late int? _cleanliness = widget.current?.cleanliness;
+  late int? _quality = widget.current?.quality;
+  late bool? _priceKept = widget.current?.priceKept;
+  late final _comment = TextEditingController(text: widget.current?.comment);
+  var _busy = false;
+
+  @override
+  void dispose() {
+    _comment.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    if (_rating == 0) return;
+    setState(() => _busy = true);
+    try {
+      await HomeFiles.submitReview(
+        widget.number,
+        rating: _rating,
+        punctuality: _punctuality,
+        cleanliness: _cleanliness,
+        quality: _quality,
+        priceKept: _priceKept,
+        comment: _comment.text.trim().isEmpty ? null : _comment.text.trim(),
+      );
+      Analytics.instance.track('review_sent', {'rating': _rating});
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ما انبعت التقييم، جرّب كمان مرة')));
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Widget _row(String label, int? value, ValueChanged<int> onChanged) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        Expanded(child: Text(label, style: const TextStyle(fontSize: 15))),
+        Stars(value: value ?? 0, size: 26, onChanged: onChanged),
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('قيّم ${widget.providerName}', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            Center(child: Stars(value: _rating, size: 40, onChanged: (v) => setState(() => _rating = v))),
+            const SizedBox(height: 12),
+            _row('الالتزام بالمواعيد', _punctuality, (v) => setState(() => _punctuality = v)),
+            _row('النضافة', _cleanliness, (v) => setState(() => _cleanliness = v)),
+            _row('جودة الشغل', _quality, (v) => setState(() => _quality = v)),
+            const SizedBox(height: 8),
+            const Text('التزم بالسعر اللي اتفقتوا عليه؟', style: TextStyle(fontSize: 15)),
+            const SizedBox(height: 6),
+            SegmentedButton<bool>(
+              showSelectedIcon: false,
+              emptySelectionAllowed: true,
+              segments: const [
+                ButtonSegment(value: true, label: Text('إي')),
+                ButtonSegment(value: false, label: Text('لا')),
+              ],
+              selected: {?_priceKept},
+              onSelectionChanged: (s) => setState(() => _priceKept = s.firstOrNull),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _comment,
+              minLines: 2,
+              maxLines: 4,
+              maxLength: 500,
+              decoration: const InputDecoration(hintText: 'كلمتين عن الشغل (اختياري)'),
+            ),
+            FilledButton(onPressed: _rating == 0 || _busy ? null : _send, child: Text(_busy ? 'عم نبعت…' : 'ابعت التقييم')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "عندي مشكلة": what happened, with photos.
+class _ClaimSheet extends StatefulWidget {
+  const _ClaimSheet({required this.requestId, required this.number});
+
+  final String requestId;
+  final int number;
+
+  @override
+  State<_ClaimSheet> createState() => _ClaimSheetState();
+}
+
+class _ClaimSheetState extends State<_ClaimSheet> {
+  final _text = TextEditingController();
+  var _photos = <XFile>[];
+  var _busy = false;
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    if (_text.text.trim().length < 3) return;
+    setState(() => _busy = true);
+    try {
+      await HomeFiles.openClaim(
+        requestId: widget.requestId,
+        number: widget.number,
+        description: _text.text.trim(),
+        photos: _photos,
+      );
+      Analytics.instance.track('warranty_claim_sent');
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '$e'.contains('no warranty')
+                  ? 'الضمان خلص على هالشغل.'
+                  : '$e'.contains('too many open')
+                  ? 'عندك بلاغات لسا مفتوحة، الفريق عم يتابعها.'
+                  : 'ما انبعت، جرّب كمان مرة',
+            ),
+          ),
+        );
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('شو المشكلة؟', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text('بتوصل للفريق مع صورك، وبيتواصلوا معك ليحددوا موعد التصليح.', style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _text,
+              minLines: 3,
+              maxLines: 5,
+              maxLength: 1000,
+              autofocus: true,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(hintText: 'مثلاً: بلّش النش بحيط الحمام من أسبوع'),
+            ),
+            PhotoPickerField(photos: _photos, onChanged: (p) => setState(() => _photos = p), max: 6, hint: 'صوّر المشكلة'),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _text.text.trim().length < 3 || _busy ? null : _send,
+              child: Text(_busy ? 'عم نبعت…' : 'ابعت للفريق'),
+            ),
+          ],
+        ),
       ),
     );
   }

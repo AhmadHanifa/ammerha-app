@@ -1,11 +1,13 @@
 import 'package:go_router/go_router.dart';
 
 import '../data/estimate.dart';
+import '../data/providers.dart';
 import '../data/showcase.dart';
 import '../features/abroad/abroad_page.dart';
 import '../features/calculator/calculator_page.dart';
 import '../features/calculator/result_page.dart';
 import '../features/inspection/inspection_page.dart';
+import '../features/providers/providers_page.dart';
 import '../features/quote/quote_page.dart';
 import '../features/quote/sent_page.dart';
 import '../features/requests/request_file_page.dart';
@@ -96,6 +98,21 @@ GoRouter createRouter() => GoRouter(
       pageBuilder: (context, state) => sharedAxisPage(
         key: state.pageKey,
         child: ScreenTracker(name: 'design_item', child: DesignPage(design: state.extra! as ReadyDesign)),
+      ),
+    ),
+    GoRoute(
+      path: '/providers',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: const ScreenTracker(name: 'providers', child: ProvidersPage()),
+      ),
+    ),
+    GoRoute(
+      path: '/providers/item',
+      redirect: (context, state) => state.extra is Provider ? null : '/providers',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: ScreenTracker(name: 'provider', child: ProviderPage(provider: state.extra! as Provider)),
       ),
     ),
     GoRoute(

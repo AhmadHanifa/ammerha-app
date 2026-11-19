@@ -1,4 +1,6 @@
 import 'package:ammerha/data/estimate.dart';
+import 'package:ammerha/data/providers.dart';
+import 'package:ammerha/features/providers/providers_page.dart';
 import 'package:ammerha/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -139,5 +141,36 @@ void main() {
     await tester.enterText(find.byType(TextField), 'AM-ABC234');
     await _tapText(tester, 'تحقق');
     expect(find.textContaining('ما لقينا شهادة'), findsOneWidget);
+  });
+
+  testWidgets('a provider card shows only numbers earned through the app', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    const painter = Provider(
+      id: 'p1',
+      kind: 'technician',
+      name: 'أبو خالد',
+      services: ['paint'],
+      photos: [],
+      jobs: 23,
+      reviews: 18,
+      claims: 3,
+      claimsFixed: 3,
+      area: 'حلب',
+      verified: true,
+      rating: 4.8,
+    );
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Directionality(textDirection: TextDirection.rtl, child: ProviderPage(provider: painter)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('23'), findsOneWidget);
+    expect(find.text('3 من 3'), findsOneWidget);
+    expect(find.text('موثّق من عمّرها'), findsOneWidget);
+    expect(find.text('اطلب منه عرض سعر'), findsOneWidget);
+    expect(find.text('لسا ما في تقييمات.'), findsOneWidget);
   });
 }

@@ -55,6 +55,7 @@ class _AmmerhaAppState extends State<AmmerhaApp> {
       ['calculator'] => _router.go('/calculator'),
       ['gallery'] => _router.go('/gallery'),
       ['designs'] => _router.go('/designs'),
+      ['providers'] => _router.go('/providers'),
       _ => _router.go('/'),
     };
   }
