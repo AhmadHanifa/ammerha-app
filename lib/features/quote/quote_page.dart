@@ -196,6 +196,14 @@ class _QuotePageState extends State<QuotePage> {
                             'رقمك ما بيوصل لحدا غيرهن.',
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: () => context.push('/legal'),
+                      child: Text(
+                        'بإرسال الطلب بتوافق على شروط الاستخدام وسياسة الخصوصية.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(decoration: TextDecoration.underline),
+                      ),
+                    ),
                   ],
                 ),
               ),

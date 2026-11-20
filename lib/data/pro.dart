@@ -121,6 +121,7 @@ class JobSummary {
   String get title => switch (kind) {
     'full' => 'إكساء شقة كاملة',
     'inspection' => 'فحص قبل الشراء',
+    'direct' => 'تواصل مباشر',
     _ => servicesLabel(services),
   };
 }

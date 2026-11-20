@@ -450,6 +450,14 @@ class _SignUpFormState extends State<_SignUpForm> {
             icon: Icons.lock_outline_rounded,
             text: 'رقمك ما بيبيّن للزباين. فريق عمّرها بيتواصل معك ليتأكد منك قبل ما يصير ملفك ظاهر.',
           ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => context.push('/legal'),
+            child: Text(
+              'بالتسجيل بتوافق على شروط الاستخدام وسياسة الخصوصية.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(decoration: TextDecoration.underline),
+            ),
+          ),
           const SizedBox(height: 16),
           FilledButton(
             onPressed: _busy ? null : _send,

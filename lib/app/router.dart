@@ -8,6 +8,7 @@ import '../features/abroad/abroad_page.dart';
 import '../features/calculator/calculator_page.dart';
 import '../features/calculator/result_page.dart';
 import '../features/inspection/inspection_page.dart';
+import '../features/legal/legal_page.dart';
 import '../features/pro/job_page.dart';
 import '../features/pro/join_page.dart';
 import '../features/pro/pro_page.dart';
@@ -126,6 +127,13 @@ GoRouter createRouter() => GoRouter(
       pageBuilder: (context, state) => sharedAxisPage(
         key: state.pageKey,
         child: ScreenTracker(name: 'article', child: ArticlePage(article: state.extra! as Article)),
+      ),
+    ),
+    GoRoute(
+      path: '/legal',
+      pageBuilder: (context, state) => sharedAxisPage(
+        key: state.pageKey,
+        child: const ScreenTracker(name: 'legal', child: LegalPage()),
       ),
     ),
     GoRoute(

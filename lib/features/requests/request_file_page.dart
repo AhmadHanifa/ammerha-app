@@ -399,7 +399,11 @@ class _Summary extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  f.isInspection ? 'فحص شقة قبل الشراء' : (f.kind == 'full' ? 'إكساء شقة كاملة' : servicesLabel(f.services)),
+                  f.isInspection
+                      ? 'فحص شقة قبل الشراء'
+                      : f.kind == 'direct'
+                      ? 'تواصل مباشر'
+                      : (f.kind == 'full' ? 'إكساء شقة كاملة' : servicesLabel(f.services)),
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),

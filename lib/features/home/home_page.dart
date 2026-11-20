@@ -112,6 +112,13 @@ class HomePage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _LinkCard(
+            icon: Icons.engineering_outlined,
+            title: 'فنيين ومهندسين موثّقين',
+            body: 'شوف شغلهم وتقييماتهم، واحكيهم مباشرة.',
+            onTap: () => context.push('/providers'),
+          ),
+          const SizedBox(height: 12),
+          _LinkCard(
             icon: Icons.fact_check_outlined,
             title: 'بدك تشتري شقة؟',
             body: 'افحصها قبل ما تشتري: تقرير بالمشاكل وكلفة تصليحها.',
@@ -199,6 +206,12 @@ class HomePage extends StatelessWidget {
               onPressed: () => context.push('/verify'),
               icon: const Icon(Icons.workspace_premium_outlined, size: 18),
               label: const Text('عندك كود شقة موثّقة؟ تحقق منه'),
+            ),
+          ),
+          Center(
+            child: TextButton(
+              onPressed: () => context.push('/legal'),
+              child: const Text('الخصوصية والشروط', style: TextStyle(fontSize: 13, color: AppColors.inkSoft)),
             ),
           ),
         ],

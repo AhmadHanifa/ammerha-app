@@ -21,7 +21,9 @@ Future<void> _tapText(WidgetTester tester, String label) async {
   if (find.text(label).evaluate().isEmpty) {
     await tester.scrollUntilVisible(find.text(label), 300, scrollable: find.byType(Scrollable).first);
   }
-  await tester.ensureVisible(find.text(label));
+  // Centred, so nothing like the bottom bar covers it.
+  await Scrollable.ensureVisible(tester.element(find.text(label)), alignment: 0.5);
+  await tester.pumpAndSettle();
   await tester.tap(find.text(label));
   await tester.pumpAndSettle();
 }
@@ -171,7 +173,7 @@ void main() {
     expect(find.text('23'), findsOneWidget);
     expect(find.text('3 من 3'), findsOneWidget);
     expect(find.text('موثّق من عمّرها'), findsOneWidget);
-    expect(find.text('اطلب منه عرض سعر'), findsOneWidget);
+    expect(find.text('احكيه عالواتساب'), findsOneWidget);
     expect(find.text('لسا ما في تقييمات.'), findsOneWidget);
   });
 
@@ -194,5 +196,17 @@ void main() {
     await tester.pumpAndSettle();
     await _tapText(tester, 'إنت فني أو مهندس؟');
     expect(find.text('انضم لعمّرها'), findsOneWidget);
+  });
+
+  testWidgets('privacy and terms open from home', (tester) async {
+    await _startApp(tester);
+    await _tapText(tester, 'الخصوصية والشروط');
+    expect(find.text('شو منجمع'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('اطلب حذف بياناتي'), 400, scrollable: find.byType(Scrollable).first);
+    expect(find.text('اطلب حذف بياناتي'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('شروط الاستخدام'), -400, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('شروط الاستخدام'));
+    await tester.pumpAndSettle();
+    expect(find.text('شو هو عمّرها'), findsOneWidget);
   });
 }

@@ -54,6 +54,23 @@ jobs:
             --arg FIREBASE_PROJECT_ID "$FIREBASE_PROJECT_ID" \
             '$ARGS.named' > env.json
 
+      # The same upload key every time, so a new APK installs over the old one.
+      # Secrets: ANDROID_KEYSTORE_BASE64 (the .jks file in base64) and
+      # ANDROID_KEYSTORE_PASSWORD. Without them the build still works, with a
+      # throwaway key.
+      - name: Signing key from secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::warning::No signing key secrets: this APK has a throwaway key and will not install over another build."
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/upload.jks
+          printf 'storeFile=upload.jks\nstorePassword=%s\nkeyPassword=%s\nkeyAlias=ammerha\n' \
+            "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" > android/key.properties
+
       - run: flutter pub get
       - run: flutter test
       - run: flutter build apk --release --split-per-abi --dart-define-from-file=env.json

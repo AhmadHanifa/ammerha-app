@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../app/config.dart';
 import '../../app/theme.dart';
 import '../../data/estimate.dart';
 import '../../data/home_file.dart';
 import '../../data/providers.dart';
+import '../../services/analytics.dart';
+import '../../services/customer.dart';
+import '../../services/requests_store.dart';
 import '../../services/showcase.dart';
+import '../../services/whatsapp.dart';
 import '../../widgets/common.dart';
 import '../../widgets/rating.dart';
 import '../showcase/gallery_page.dart';
@@ -159,6 +166,75 @@ class ProviderPage extends StatefulWidget {
 class _ProviderPageState extends State<ProviderPage> {
   late final Future<List<ProviderReview>> _reviews = Showcase.instance.reviews(widget.provider.id);
 
+  /// Makes a small request with a number, then opens the provider's WhatsApp.
+  /// The number is what keeps the job, its review and its warranty in the app.
+  Future<void> _contact() async {
+    final p = widget.provider;
+    final messenger = ScaffoldMessenger.of(context);
+    if (!AppConfig.hasBackend) {
+      messenger.showSnackBar(const SnackBar(content: Text('بيشتغل بالنسخة الموصولة بالسيرفر.')));
+      return;
+    }
+    final details = await showModalBottomSheet<({String name, String phone, String? note})>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _ContactSheet(providerName: p.name),
+    );
+    if (details == null || !mounted) return;
+    try {
+      await Customer.instance.ensureSignedIn();
+      final json = await Supabase.instance.client.rpc(
+        'contact_provider',
+        params: {
+          'p_device_id': await Analytics.instance.ensureDeviceId(),
+          'p_provider_id': p.id,
+          'p_name': details.name,
+          'p_whatsapp': details.phone,
+          'p_note': details.note,
+        },
+      ).timeout(AppConfig.requestTimeout) as Map<String, dynamic>;
+      final number = (json['request_no'] as num).toInt();
+      if (RequestsStore.instance.items.every((r) => r.number != number)) {
+        await RequestsStore.instance.add(
+          SavedRequest(
+            number: number,
+            title: 'تواصل مع ${p.name}',
+            size: p.role,
+            level: '',
+            range: '',
+            rangeWords: '',
+            createdAt: DateTime.now(),
+            kind: 'direct',
+          ),
+        );
+      }
+      Analytics.instance.track('provider_contacted', {'provider': p.id, 'request_no': number});
+      final opened = await openChat(
+        json['provider_phone'] as String,
+        [
+          'مرحبا ${p.name}، شفت صفحتك على تطبيق عمّرها.',
+          'رقم طلبي: $number',
+          if (details.note != null) details.note!,
+        ].join('\n'),
+      );
+      if (!opened) {
+        messenger.showSnackBar(const SnackBar(content: Text('ما انفتح الواتساب. طلبك محفوظ بـ"طلباتي".')));
+      }
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(switch ('$e') {
+            final s when s.contains('too many requests') => 'بعتت طلبات كتير اليوم. جرّب بكرا.',
+            final s when s.contains('bad phone') => 'تأكد من رقمك.',
+            final s when s.contains('provider unavailable') => 'هالفني مو متاح هلق.',
+            _ => 'ما زبط، تأكد من النت وجرّب كمان مرة',
+          }),
+        ),
+      );
+    }
+  }
+
   void _ask() {
     final p = widget.provider;
     final services = {for (final s in Service.values) if (p.services.contains(s.key)) s};
@@ -257,7 +333,21 @@ class _ProviderPageState extends State<ProviderPage> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 22),
-              child: FilledButton(onPressed: _ask, child: const Text('اطلب منه عرض سعر')),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(onPressed: _ask, child: const Text('احسب واطلب عرض سعر')),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _contact,
+                      icon: const Icon(Icons.chat_rounded),
+                      label: const Text('احكيه عالواتساب'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -327,6 +417,105 @@ class ReviewCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Name and number before talking to a provider; remembered for next time.
+class _ContactSheet extends StatefulWidget {
+  const _ContactSheet({required this.providerName});
+
+  final String providerName;
+
+  @override
+  State<_ContactSheet> createState() => _ContactSheetState();
+}
+
+class _ContactSheetState extends State<_ContactSheet> {
+  static const _nameKey = 'customer.name';
+  static const _phoneKey = 'customer.phone';
+
+  final _form = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _phone = TextEditingController();
+  final _note = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((prefs) {
+      if (!mounted) return;
+      _name.text = prefs.getString(_nameKey) ?? '';
+      _phone.text = prefs.getString(_phoneKey) ?? '';
+    });
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    _note.dispose();
+    super.dispose();
+  }
+
+  Future<void> _go() async {
+    if (!_form.currentState!.validate()) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_nameKey, _name.text.trim());
+    await prefs.setString(_phoneKey, _phone.text.trim());
+    if (mounted) {
+      Navigator.pop(context, (
+        name: _name.text.trim(),
+        phone: _phone.text.trim(),
+        note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
+      child: Form(
+        key: _form,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('قبل ما تحكي ${widget.providerName}', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                'بيصير لطلبك رقم، فبيضل الشغل محفوظ بملف بيتك، وبتقدر تقيّمه وتستفيد من الضمان.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _name,
+                decoration: const InputDecoration(hintText: 'اسمك'),
+                validator: (v) => (v ?? '').trim().isEmpty ? 'لازم تعبّي هالحقل' : null,
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                textDirection: TextDirection.ltr,
+                textAlign: TextAlign.right,
+                decoration: const InputDecoration(hintText: 'رقم الواتساب تبعك'),
+                validator: (v) => (v ?? '').replaceAll(RegExp(r'\D'), '').length < 9 ? 'تأكد من الرقم' : null,
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _note,
+                minLines: 2,
+                maxLines: 3,
+                decoration: const InputDecoration(hintText: 'شو بدك؟ (اختياري)'),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(onPressed: _go, icon: const Icon(Icons.chat_rounded), label: const Text('افتح الواتساب')),
+            ],
+          ),
         ),
       ),
     );
