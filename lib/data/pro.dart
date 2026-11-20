@@ -23,6 +23,7 @@ class MyProfile {
     this.reviewNote,
     this.verified = false,
     this.rating,
+    this.photos = const [],
   });
 
   factory MyProfile.fromJson(Map<String, dynamic> j, String Function(String) url) => MyProfile(
@@ -44,6 +45,10 @@ class MyProfile {
     reviewNote: j['review_note'] as String?,
     verified: j['is_verified'] == true,
     rating: j['rating'] as num?,
+    photos: [
+      for (final p in ((j['photos'] as List?) ?? const []).cast<Map<String, dynamic>>())
+        (id: p['id'] as String, url: url(p['path'] as String), caption: p['caption'] as String?),
+    ],
   );
 
   final String id;
@@ -66,6 +71,9 @@ class MyProfile {
   final String? reviewNote;
   final bool verified;
   final num? rating;
+
+  /// Photos of their work, shown on their public page.
+  final List<({String id, String url, String? caption})> photos;
 
   bool get approved => status == 'approved';
   String get kindLabel => providerKindLabels[kind] ?? kind;

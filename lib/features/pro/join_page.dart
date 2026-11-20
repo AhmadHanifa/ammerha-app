@@ -73,14 +73,54 @@ class _JoinPageState extends State<JoinPage> {
   }
 }
 
-class _Status extends StatelessWidget {
+class _Status extends StatefulWidget {
   const _Status({required this.me, required this.onEdit});
 
   final MyProfile me;
   final VoidCallback onEdit;
 
   @override
+  State<_Status> createState() => _StatusState();
+}
+
+class _StatusState extends State<_Status> {
+  late MyProfile me = widget.me;
+  var _busy = false;
+
+  Future<void> _refresh() async {
+    final fresh = await Pro.me();
+    if (fresh != null && mounted) setState(() => me = fresh);
+  }
+
+  Future<void> _run(Future<void> Function() action, String done) async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      await action();
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+      await _refresh();
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('ما ارتفعت، تأكد من النت وجرّب كمان مرة')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _changePhoto() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1200, imageQuality: 85);
+    if (picked == null) return;
+    await _run(() => Pro.uploadPhoto(me.id, picked), 'تبدّلت صورتك');
+  }
+
+  Future<void> _addWork() async {
+    final picked = await ImagePicker().pickMultiImage(maxWidth: 1600, imageQuality: 80, limit: 10);
+    if (picked.isEmpty) return;
+    await _run(() => Pro.addWorkPhotos(me.id, picked), 'انضافت الصور لصفحتك');
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final onEdit = widget.onEdit;
     final (title, body, icon) = switch (me.status) {
       'approved' => ('ملفك ظاهر للزباين', 'كل شغل بيوصلك عن طريق التطبيق بيرفع تقييمك وعدد شغلاتك الموثّقة.', Icons.verified_rounded),
       'rejected' => ('في شي ناقص بطلبك', me.reviewNote ?? 'عدّل ملفك وابعته كمان مرة.', Icons.error_outline_rounded),
@@ -92,7 +132,24 @@ class _Status extends StatelessWidget {
       children: [
         Row(
           children: [
-            ProviderAvatar(name: me.name, url: me.photoUrl, size: 64, verified: me.verified),
+            GestureDetector(
+              onTap: _busy ? null : _changePhoto,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  ProviderAvatar(name: me.name, url: me.photoUrl, size: 64, verified: me.verified),
+                  const Positioned(
+                    bottom: -2,
+                    right: -2,
+                    child: CircleAvatar(
+                      radius: 12,
+                      backgroundColor: AppColors.primary,
+                      child: Icon(Icons.photo_camera_outlined, size: 14, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -132,6 +189,49 @@ class _Status extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(child: Text('صور من شغلك', style: Theme.of(context).textTheme.titleMedium)),
+            TextButton.icon(
+              onPressed: _busy ? null : _addWork,
+              icon: const Icon(Icons.add_a_photo_outlined, size: 18),
+              label: const Text('ضيف'),
+            ),
+          ],
+        ),
+        Text('بتطلع بصفحتك للزباين. صوّر شغل حقيقي عملته.', style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 8),
+        if (me.photos.isEmpty)
+          const NoteRow(icon: Icons.photo_library_outlined, text: 'لسا ما ضفت صور. الصفحة اللي فيها صور بتجيب طلبات أكتر.')
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final p in me.photos)
+                Stack(
+                  children: [
+                    GestureDetector(
+                      onTap: () => showPhotos(context, [for (final x in me.photos) x.url], initial: me.photos.indexOf(p)),
+                      child: SizedBox.square(dimension: 84, child: NetImage(p.url, radius: 12)),
+                    ),
+                    Positioned(
+                      top: 2,
+                      left: 2,
+                      child: InkWell(
+                        onTap: _busy ? null : () => _run(() => Pro.removeWorkPhoto(p.id), 'انشالت الصورة'),
+                        child: const CircleAvatar(
+                          radius: 11,
+                          backgroundColor: Colors.black54,
+                          child: Icon(Icons.close_rounded, size: 14, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
         if (me.approved) ...[
           const SizedBox(height: 16),
           FilledButton.icon(
@@ -205,9 +305,23 @@ class _SignUpFormState extends State<_SignUpForm> {
         bio: opt(_bio),
         syndicateNo: _engineer ? opt(_syndicate) : null,
       );
-      if (_photo.isNotEmpty) await Pro.uploadPhoto(id, _photo.first);
-      if (_certificate.isNotEmpty) await Pro.uploadCertificate(id, _certificate.first);
-      Analytics.instance.track('provider_signup', {'kind': _kind});
+      final failed = <String>[];
+      if (_photo.isNotEmpty) {
+        try {
+          await Pro.uploadPhoto(id, _photo.first);
+        } catch (_) {
+          failed.add('صورتك');
+        }
+      }
+      if (_certificate.isNotEmpty) {
+        try {
+          await Pro.uploadCertificate(id, _certificate.first);
+        } catch (_) {
+          failed.add('صورة الشهادة');
+        }
+      }
+      Analytics.instance.track('provider_signup', {'kind': _kind, 'upload_failed': failed.length});
+      if (failed.isNotEmpty) _say('انحفظ ملفك، بس ${failed.join(' و')} ما ارتفعت. جرّب كمان مرة من "عدّل ملفي".');
       widget.onDone();
     } catch (e) {
       _say(switch ('$e') {

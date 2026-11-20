@@ -58,6 +58,27 @@ abstract final class Pro {
     await _call<void>('set_provider_files', {'p_photo_path': path});
   }
 
+  static Future<void> addWorkPhotos(String providerId, List<XFile> photos) async {
+    for (final photo in photos) {
+      final path = 'providers/$providerId/work-${const Uuid().v4()}.jpg';
+      await _db.storage.from('public-media').uploadBinary(
+        path,
+        await photo.readAsBytes(),
+        fileOptions: const FileOptions(contentType: 'image/jpeg'),
+      );
+      await _call<String>('add_provider_photo', {'p_path': path});
+    }
+  }
+
+  static Future<void> removeWorkPhoto(String photoId) async {
+    final path = await _call<String>('remove_provider_photo', {'p_photo_id': photoId});
+    try {
+      await _db.storage.from('public-media').remove([path]);
+    } catch (_) {
+      // The photo is off the page; a leftover file does no harm.
+    }
+  }
+
   static Future<void> uploadCertificate(String providerId, XFile file) async {
     final path = '$providerId/certificate-${const Uuid().v4()}.jpg';
     await _db.storage.from('provider-docs').uploadBinary(
