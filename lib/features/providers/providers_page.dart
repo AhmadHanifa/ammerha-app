@@ -16,6 +16,7 @@ import '../../services/whatsapp.dart';
 import '../../widgets/common.dart';
 import '../../widgets/rating.dart';
 import '../showcase/gallery_page.dart';
+import '../../widgets/states.dart';
 
 /// فنيين ومهندسين موثّقين: everyone with a public card, with numbers that
 /// come only from jobs done through the app.
@@ -317,10 +318,7 @@ class _ProviderPageState extends State<ProviderPage> {
                     builder: (context, snap) {
                       final reviews = snap.data ?? const <ProviderReview>[];
                       if (snap.connectionState != ConnectionState.done) {
-                        return const Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                        );
+                        return const SkeletonList(count: 2, height: 110);
                       }
                       if (reviews.isEmpty) {
                         return const NoteRow(icon: Icons.rate_review_outlined, text: 'لسا ما في تقييمات.');

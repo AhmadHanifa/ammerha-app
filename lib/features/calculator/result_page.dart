@@ -8,6 +8,7 @@ import '../../services/estimates.dart';
 import '../../services/partner.dart';
 import '../../services/push.dart';
 import '../../widgets/common.dart';
+import '../../widgets/states.dart';
 
 /// What the quote screen needs from the result.
 class QuoteArgs {
@@ -106,13 +107,25 @@ class _ResultPageState extends State<ResultPage> {
                               ),
                             ],
                           ),
-                          _ => const SizedBox(
-                            height: 100,
-                            child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                          _ => const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Skeleton(width: 170, height: 14),
+                              SizedBox(height: 12),
+                              Skeleton(width: 230, height: 30),
+                              SizedBox(height: 10),
+                              Skeleton(width: 120, height: 12),
+                            ],
                           ),
                         },
                       ),
+                      if (estimate != null && estimate.parts.length > 1) ...[
+                        const SizedBox(height: 14),
+                        _Parts(parts: estimate.parts),
+                      ],
                       if (estimate != null) ...[
+                        const SizedBox(height: 12),
+                        const _Included(),
                         const SizedBox(height: 12),
                         ValueListenableBuilder(
                           valueListenable: Partner.instance.sponsorName,
@@ -218,6 +231,80 @@ class _UpsellCard extends StatelessWidget {
             ),
           ),
           TextButton(onPressed: onAdd, child: const Text('ضيف')),
+        ],
+      ),
+    );
+  }
+}
+
+/// What each part of the work takes, as bars: no unit prices.
+class _Parts extends StatelessWidget {
+  const _Parts({required this.parts});
+
+  final List<({String label, int share})> parts;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('وين بتروح الكلفة تقريباً', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
+          for (final part in parts) ...[
+            Row(
+              children: [
+                Expanded(child: Text(part.label, style: const TextStyle(fontSize: 15))),
+                Text('${part.share}%', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: part.share / 100,
+                minHeight: 8,
+                backgroundColor: AppColors.lineSoft,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// What the range covers, and what it does not.
+class _Included extends StatelessWidget {
+  const _Included();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget line(IconData icon, Color color, String text) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 14, height: 1.6))),
+        ],
+      ),
+    );
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('شو داخل بالسعر', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 6),
+          line(Icons.check_circle_outline_rounded, AppColors.primary, 'المواد والشغل بالمستوى اللي اخترته.'),
+          line(Icons.check_circle_outline_rounded, AppColors.primary, 'التركيب والتشطيب لكل قسم بالشريط فوق.'),
+          line(Icons.remove_circle_outline_rounded, AppColors.inkSoft, 'الأثاث والأجهزة الكهربائية مو داخلين.'),
+          line(Icons.remove_circle_outline_rounded, AppColors.inkSoft, 'أي شغل إضافي بيبيّن بالمعاينة بيتسعّر لحاله.'),
         ],
       ),
     );

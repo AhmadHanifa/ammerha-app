@@ -119,7 +119,7 @@ class SmallJobNote {
 
 /// The approximate price range; the final price is the contractor's, after the visit.
 class Estimate {
-  const Estimate({required this.min, required this.max, this.bundleDiscount = 0, this.smallJob});
+  const Estimate({required this.min, required this.max, this.bundleDiscount = 0, this.smallJob, this.parts = const []});
 
   factory Estimate.fromJson(Map<String, dynamic> json) {
     final small = json['small_job'] as Map<String, dynamic>?;
@@ -130,6 +130,10 @@ class Estimate {
       smallJob: small == null
           ? null
           : SmallJobNote(minOrder: small['mode'] == 'min_order', amount: (small['amount'] as num).round()),
+      parts: [
+        for (final p in ((json['parts'] as List?) ?? const []).cast<Map<String, dynamic>>())
+          (label: partLabel(p['service'] as String), share: (p['share'] as num).round()),
+      ],
     );
   }
 
@@ -140,9 +144,17 @@ class Estimate {
   final num bundleDiscount;
   final SmallJobNote? smallJob;
 
+  /// Roughly what each part takes, in percent, biggest first. Empty when the
+  /// server is older than the parts.
+  final List<({String label, int share})> parts;
+
   String get range => '${groupDigits('$min')} – ${groupDigits('$max')} \$';
   String get rangeWords => '${groupDigits('$min')} لـ ${groupDigits('$max')} دولار';
 }
+
+/// The name of a part of the work; `general` is the windows.
+String partLabel(String key) =>
+    Service.values.where((s) => s.key == key).firstOrNull?.label ?? (key == 'general' ? 'شبابيك ألمنيوم' : key);
 
 String groupDigits(String s) {
   final parts = s.split('.');
@@ -200,11 +212,19 @@ Estimate demoEstimate(CalcInput input) {
   final rooms = input.needsRooms ? input.rooms : 0;
   final baths = input.needsRooms ? input.baths : 0;
   var total = 0.0;
+  final bySection = <String, double>{};
   for (final item in _demoItems) {
     if (!input.isFull && !input.services.contains(item.service)) continue;
     final quantity = item.base + item.perM2 * input.area + item.perRoom * rooms + item.perBath * baths;
-    total += quantity * item.prices[input.level.index];
+    final cost = quantity * item.prices[input.level.index];
+    total += cost;
+    final key = item.service?.key ?? 'general';
+    bySection[key] = (bySection[key] ?? 0) + cost;
   }
+  final parts = [
+    for (final e in bySection.entries.toList()..sort((a, b) => b.value.compareTo(a.value)))
+      (label: partLabel(e.key), share: (100 * e.value / total).round()),
+  ];
   if (input.isFull || input.services.length >= 2) total *= 1 - _demoBundleDiscount / 100;
 
   int rounded(double v) => v >= 1000 ? (v / 50).round() * 50 : (v / 10).round() * 10;
@@ -212,5 +232,6 @@ Estimate demoEstimate(CalcInput input) {
     min: rounded(total * (1 - _demoSpreadLow / 100)),
     max: rounded(total * (1 + _demoSpreadHigh / 100)),
     bundleDiscount: _demoBundleDiscount,
+    parts: parts,
   );
 }

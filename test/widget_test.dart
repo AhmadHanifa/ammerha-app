@@ -16,6 +16,14 @@ Future<void> _startApp(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Scrolls a lazy list until [label] is built, then checks it is there.
+Future<void> _see(WidgetTester tester, String label) async {
+  if (find.text(label).evaluate().isEmpty) {
+    await tester.scrollUntilVisible(find.text(label), 300, scrollable: find.byType(Scrollable).first);
+  }
+  expect(find.text(label), findsOneWidget);
+}
+
 Future<void> _tapText(WidgetTester tester, String label) async {
   // Long lists build lazily: scroll until the item exists.
   if (find.text(label).evaluate().isEmpty) {
@@ -64,10 +72,10 @@ void main() {
 
   testWidgets('a full apartment: calculator, range, quote form, then a request number', (tester) async {
     await _startApp(tester);
-    expect(find.text('بدك إكساء شقة كاملة، ولا خدمة وحدة؟'), findsOneWidget);
+    expect(find.text('احسب كلفة شقتك'), findsOneWidget);
     expect(find.textContaining('سنديان'), findsNothing);
 
-    await _tapText(tester, 'ابدأ الحساب');
+    await _tapText(tester, 'شقة كاملة');
     expect(find.text('قديش مساحة الشقة؟'), findsOneWidget);
     expect(find.text('الخطوة 1 من 3'), findsOneWidget);
 
@@ -82,7 +90,8 @@ void main() {
     await _tapText(tester, 'التالي');
     await _tapText(tester, 'احسب الكلفة');
     expect(find.text('8,200 – 11,500 \$'), findsOneWidget);
-    expect(find.text('هاد سعر تقريبي. السعر النهائي بيحدده فريق عمّرها بعد المعاينة.'), findsOneWidget);
+    expect(find.text('وين بتروح الكلفة تقريباً'), findsOneWidget);
+    await _see(tester, 'هاد سعر تقريبي. السعر النهائي بيحدده فريق عمّرها بعد المعاينة.');
 
     await _tapText(tester, 'اطلب عرض سعر');
     await tester.enterText(find.byType(TextFormField).at(0), 'أبو محمد');
@@ -108,12 +117,12 @@ void main() {
     await _tapText(tester, 'التالي');
     expect(find.text('شو مستوى الإكساء؟'), findsOneWidget);
     await _tapText(tester, 'احسب الكلفة');
-    expect(find.text('ضيف البلاط كمان بسعر أحسن'), findsOneWidget);
+    await _see(tester, 'ضيف البلاط كمان بسعر أحسن');
   });
 
   testWidgets('purchase inspection: from home to a request number, with no level or range', (tester) async {
     await _startApp(tester);
-    await _tapText(tester, 'بدك تشتري شقة؟');
+    await _tapText(tester, 'افحص شقة قبل ما تشتري');
     expect(find.text('افحص الشقة قبل ما تشتريها'), findsOneWidget);
 
     await _tapText(tester, 'اطلب الفحص');
@@ -194,7 +203,7 @@ void main() {
 
     await tester.tap(find.text('الرئيسية'));
     await tester.pumpAndSettle();
-    await _tapText(tester, 'إنت فني أو مهندس؟');
+    await _tapText(tester, 'إنت فني أو مهندس؟ سجّل ببلاش');
     expect(find.text('انضم لعمّرها'), findsOneWidget);
   });
 

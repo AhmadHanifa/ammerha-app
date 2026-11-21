@@ -9,6 +9,7 @@ import '../../services/partner.dart';
 import '../../services/requests_store.dart';
 import '../../services/whatsapp.dart';
 import '../../widgets/common.dart';
+import '../../widgets/states.dart';
 
 /// "طلباتي": the requests sent from this phone, each with its number.
 class RequestsPage extends StatefulWidget {
@@ -164,28 +165,10 @@ class _Empty extends StatelessWidget {
   const _Empty();
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 48),
-      child: Column(
-        children: [
-          const Icon(Icons.inbox_outlined, size: 48, color: AppColors.inkSoft),
-          const SizedBox(height: 12),
-          Text('لسا ما بعتت طلبات', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          const Text(
-            'احسب كلفة شقتك واطلب عرض سعر، وبيطلع طلبك هون مع رقمه.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.inkSoft),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: () => context.push('/calculator', extra: const CalcInput()),
-            style: FilledButton.styleFrom(minimumSize: const Size(160, 48)),
-            child: const Text('احسب الكلفة'),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => EmptyState(
+    title: 'لسا ما بعتت طلبات',
+    body: 'احسب كلفة شقتك أو احكي فني، وبيطلع طلبك هون مع رقمه.',
+    action: 'احسب الكلفة',
+    onAction: () => context.push('/calculator', extra: const CalcInput()),
+  );
 }

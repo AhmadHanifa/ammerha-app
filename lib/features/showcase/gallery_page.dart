@@ -7,6 +7,7 @@ import '../../data/showcase.dart';
 import '../../services/showcase.dart';
 import '../../widgets/common.dart';
 import '../../widgets/photos.dart';
+import '../../widgets/states.dart';
 
 /// "معرض الأعمال": finished jobs by سنديان, before and after.
 class GalleryPage extends StatefulWidget {
@@ -283,8 +284,7 @@ class _Loading extends StatelessWidget {
   const _Loading();
 
   @override
-  Widget build(BuildContext context) =>
-      const Padding(padding: EdgeInsets.all(48), child: Center(child: CircularProgressIndicator(color: AppColors.primary)));
+  Widget build(BuildContext context) => const SkeletonList();
 }
 
 class _Empty extends StatelessWidget {
@@ -293,10 +293,7 @@ class _Empty extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 16),
-    child: Text(text, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.inkSoft, fontSize: 15)),
-  );
+  Widget build(BuildContext context) => EmptyState(title: 'قريباً', body: text);
 }
 
 class _Retry extends StatelessWidget {

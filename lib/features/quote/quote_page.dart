@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app/config.dart';
@@ -36,6 +37,20 @@ class _QuotePageState extends State<QuotePage> {
   late var _remote = widget.args.input.remote;
   var _photos = <XFile>[];
   var _sending = false;
+
+  /// The same keys as "احكيه عالواتساب": a returning customer types nothing.
+  static const _nameKey = 'customer.name';
+  static const _phoneKey = 'customer.phone';
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((prefs) {
+      if (!mounted) return;
+      if (_name.text.isEmpty) _name.text = prefs.getString(_nameKey) ?? '';
+      if (_phone.text.isEmpty) _phone.text = prefs.getString(_phoneKey) ?? '';
+    });
+  }
 
   @override
   void dispose() {
@@ -94,6 +109,9 @@ class _QuotePageState extends State<QuotePage> {
         createdAt: DateTime.now(),
       );
       await RequestsStore.instance.add(request);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_nameKey, _name.text.trim());
+      await prefs.setString(_phoneKey, _phone.text.trim());
       Analytics.instance.track('quote_submitted', {'request_no': number, 'kind': input.kind.name});
       if (!mounted) return;
       context.go('/sent', extra: request);
@@ -171,23 +189,37 @@ class _QuotePageState extends State<QuotePage> {
                     const SizedBox(height: 16),
                     _Field(label: 'الاسم', hint: 'أبو محمد', controller: _name, required: true),
                     _Field(label: 'رقم الواتساب', hint: '09xx xxx xxx', controller: _phone, phone: true, required: true),
-                    _Field(label: 'المنطقة', hint: 'حلب، الشهباء', controller: _area),
-                    _Field(
-                      label: 'ملاحظات (اختياري)',
-                      hint: 'بدي المطبخ ألمنيوم، والحمامات سيراميك تركي',
-                      controller: _notes,
-                      lines: 3,
+                    // Only the name and number are needed; the rest waits here.
+                    Theme(
+                      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        initiallyExpanded: _remote,
+                        tilePadding: EdgeInsets.zero,
+                        childrenPadding: EdgeInsets.zero,
+                        title: const Text('تفاصيل إضافية (اختياري)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                        subtitle: Text('المنطقة، ملاحظات، صور الشقة، كود مكتب عقاري', style: Theme.of(context).textTheme.bodySmall),
+                        children: [
+                          _Field(label: 'المنطقة', hint: 'حلب، الشهباء', controller: _area),
+                          _Field(
+                            label: 'ملاحظات',
+                            hint: 'بدي المطبخ ألمنيوم، والحمامات سيراميك تركي',
+                            controller: _notes,
+                            lines: 3,
+                          ),
+                          AbroadField(remote: _remote, onChanged: (v) => setState(() => _remote = v), country: _country),
+                          const SizedBox(height: 4),
+                          AgencyCodeField(controller: _agency),
+                          const SizedBox(height: 16),
+                          PhotoPickerField(
+                            photos: _photos,
+                            onChanged: (p) => setState(() => _photos = p),
+                            hint: 'صوّر الشقة إذا فيك: بيساعد الفريق يعطيك سعر أدق قبل المعاينة.',
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
                     ),
-                    AbroadField(remote: _remote, onChanged: (v) => setState(() => _remote = v), country: _country),
-                    const SizedBox(height: 4),
-                    AgencyCodeField(controller: _agency),
-                    const SizedBox(height: 16),
-                    PhotoPickerField(
-                      photos: _photos,
-                      onChanged: (p) => setState(() => _photos = p),
-                      hint: 'صوّر الشقة إذا فيك (اختياري): بيساعد الفريق يعطيك سعر أدق قبل المعاينة.',
-                    ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     ValueListenableBuilder(
                       valueListenable: Partner.instance.sponsorName,
                       builder: (context, sponsor, _) => NoteRow(

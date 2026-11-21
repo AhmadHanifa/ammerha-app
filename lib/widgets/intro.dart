@@ -55,7 +55,8 @@ class _IntroOverlayState extends State<IntroOverlay> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    _controller.dispose();
+    // Switched off, the controller was never made; making it now would fail.
+    if (widget.enabled) _controller.dispose();
     super.dispose();
   }
 

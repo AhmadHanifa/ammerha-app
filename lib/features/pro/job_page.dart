@@ -10,6 +10,7 @@ import '../../services/pro.dart';
 import '../../services/whatsapp.dart';
 import '../../widgets/common.dart';
 import '../../widgets/photos.dart';
+import '../../widgets/states.dart';
 
 /// One job, for the provider: the customer's contact, the stages with their
 /// photos, the wiring map, materials, handover photos and warranty calls.
@@ -151,10 +152,7 @@ class _JobPageState extends State<JobPage> {
                   if (snap.hasError)
                     const NoteRow(icon: Icons.cloud_off_rounded, text: 'ما قدرنا نفتح الشغلة. جرّب كمان مرة.')
                   else if (job == null)
-                    const Padding(
-                      padding: EdgeInsets.all(48),
-                      child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                    )
+                    const SkeletonList(count: 4)
                   else
                     ..._sections(job),
                 ],

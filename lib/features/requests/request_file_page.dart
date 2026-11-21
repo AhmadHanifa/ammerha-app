@@ -17,6 +17,7 @@ import '../../widgets/common.dart';
 import '../../widgets/photos.dart';
 import '../../widgets/rating.dart';
 import '../providers/providers_page.dart';
+import '../../widgets/states.dart';
 
 /// ملف البيت: one request's stages with their photos and the customer's
 /// approval, the wiring map, the materials to confirm, payments, the
@@ -106,10 +107,7 @@ class _RequestFilePageState extends State<RequestFilePage> {
                   else if (snap.hasError)
                     _Problem(notSignedIn: snap.error is NotSignedIn, onRetry: _reload)
                   else if (file == null)
-                    const Padding(
-                      padding: EdgeInsets.all(48),
-                      child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                    )
+                    const SkeletonList(count: 4)
                   else
                     ..._sections(file, extras),
                 ],

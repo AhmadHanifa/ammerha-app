@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app/config.dart';
@@ -39,6 +40,16 @@ class _InspectionPageState extends State<InspectionPage> {
   late var _remote = widget.remote;
   var _photos = <XFile>[];
   var _sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((prefs) {
+      if (!mounted) return;
+      if (_name.text.isEmpty) _name.text = prefs.getString('customer.name') ?? '';
+      if (_phone.text.isEmpty) _phone.text = prefs.getString('customer.phone') ?? '';
+    });
+  }
 
   @override
   void dispose() {
@@ -93,6 +104,9 @@ class _InspectionPageState extends State<InspectionPage> {
         kind: 'inspection',
       );
       await RequestsStore.instance.add(request);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('customer.name', _name.text.trim());
+      await prefs.setString('customer.phone', _phone.text.trim());
       Analytics.instance.track('inspection_submitted', {'request_no': number, 'remote': _remote});
       if (!mounted) return;
       context.go('/sent', extra: request);

@@ -57,7 +57,7 @@ ThemeData buildAppTheme({bool useGoogleFonts = true}) {
       titleMedium: text.titleMedium?.copyWith(fontSize: 17, height: 1.6, fontWeight: FontWeight.w600),
       bodyLarge: text.bodyLarge?.copyWith(fontSize: 16, height: 1.6),
       bodyMedium: text.bodyMedium?.copyWith(fontSize: 15, height: 1.6),
-      bodySmall: text.bodySmall?.copyWith(fontSize: 13, height: 1.6, color: AppColors.inkSoft),
+      bodySmall: text.bodySmall?.copyWith(fontSize: 14, height: 1.6, color: AppColors.inkSoft),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(

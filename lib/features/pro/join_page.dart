@@ -12,6 +12,7 @@ import '../../services/pro.dart';
 import '../../widgets/common.dart';
 import '../../widgets/photos.dart';
 import '../../widgets/rating.dart';
+import '../../widgets/states.dart';
 
 /// "انضم لعمّرها": technicians sign up with their phone; engineers also with
 /// their syndicate number and graduation certificate. Free for now.
@@ -48,10 +49,7 @@ class _JoinPageState extends State<JoinPage> {
                 if (!AppConfig.hasBackend)
                   const NoteRow(icon: Icons.info_outline_rounded, text: 'التسجيل بيشتغل بالنسخة الموصولة بالسيرفر.')
                 else if (snap.connectionState != ConnectionState.done)
-                  const Padding(
-                    padding: EdgeInsets.all(48),
-                    child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                  )
+                  const SkeletonList(count: 2)
                 else if (snap.hasError)
                   Column(
                     children: [

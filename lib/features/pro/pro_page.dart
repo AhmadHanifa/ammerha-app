@@ -6,6 +6,7 @@ import '../../data/home_file.dart';
 import '../../data/pro.dart';
 import '../../services/pro.dart';
 import '../../widgets/common.dart';
+import '../../widgets/states.dart';
 
 /// The provider's space: the jobs the team sent them.
 class ProPage extends StatefulWidget {
@@ -44,19 +45,16 @@ class _ProPageState extends State<ProPage> {
                     ),
                   ),
                   if (snap.connectionState != ConnectionState.done)
-                    const Padding(
-                      padding: EdgeInsets.all(48),
-                      child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                    )
+                    const SkeletonList()
                   else if (snap.hasError)
                     const NoteRow(
                       icon: Icons.cloud_off_rounded,
                       text: 'ما قدرنا نجيب شغلاتك. إذا ملفك لسا عند الفريق، بتطلع شغلاتك هون بعد الموافقة.',
                     )
                   else if (jobs.isEmpty)
-                    const NoteRow(
-                      icon: Icons.work_outline_rounded,
-                      text: 'لسا ما في شغلات. لما زبون يطلب منك أو يبعتلك الفريق شغلة، بتطلع هون وبيوصلك إشعار.',
+                    const EmptyState(
+                      title: 'لسا ما في شغلات',
+                      body: 'لما زبون يحكيك أو يبعتلك الفريق شغلة، بتطلع هون وبيوصلك إشعار.',
                     )
                   else
                     for (final j in jobs) ...[_JobTile(job: j), const SizedBox(height: 10)],
